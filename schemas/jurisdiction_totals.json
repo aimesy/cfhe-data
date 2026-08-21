@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CFHE jurisdiction permit totals",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "jurisdictions"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutoff_year",
+        "last_updated",
+        "provisional",
+        "complete_after",
+        "source_manifest_sha256",
+        "dedupe_profile",
+        "jurisdiction_count",
+        "selected_row_count",
+        "selected_units",
+        "retained_row_count",
+        "removed_row_count",
+        "removed_units",
+        "undated_permits"
+      ],
+      "properties": {
+        "cutoff_year": {"type": "integer", "minimum": 1900, "maximum": 3000},
+        "last_updated": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "provisional": {"type": "boolean"},
+        "complete_after": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "source_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "dedupe_profile": {"type": "string", "minLength": 1},
+        "jurisdiction_count": {"type": "integer", "minimum": 0},
+        "selected_row_count": {"type": "integer", "minimum": 0},
+        "selected_units": {"type": "integer", "minimum": 0},
+        "retained_row_count": {"type": "integer", "minimum": 0},
+        "removed_row_count": {"type": "integer", "minimum": 0},
+        "removed_units": {"type": "integer", "minimum": 0},
+        "undated_permits": {"type": "integer", "minimum": 0}
+      }
+    },
+    "jurisdictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jurisdiction",
+          "jurisdiction_key",
+          "acutely_low",
+          "extremely_low",
+          "very_low",
+          "low",
+          "moderate",
+          "above_moderate",
+          "total",
+          "undated_permits",
+          "last_updated",
+          "data_status"
+        ],
+        "properties": {
+          "jurisdiction": {"type": "string", "minLength": 1},
+          "jurisdiction_key": {"type": "string", "minLength": 1},
+          "acutely_low": {"type": "integer", "minimum": 0},
+          "extremely_low": {"type": "integer", "minimum": 0},
+          "very_low": {"type": "integer", "minimum": 0},
+          "low": {"type": "integer", "minimum": 0},
+          "moderate": {"type": "integer", "minimum": 0},
+          "above_moderate": {"type": "integer", "minimum": 0},
+          "total": {"type": "integer", "minimum": 0},
+          "undated_permits": {"type": "integer", "minimum": 0},
+          "last_updated": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "data_status": {"enum": ["reported", "no_selected_rows"]}
+        }
+      }
+    }
+  }
+}

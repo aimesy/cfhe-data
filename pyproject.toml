@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cfhe-data"
+version = "0.1.0"
+description = "Reproducible HCD APR data pipeline for the Fair Housing Elements tracker"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "California YIMBY" }]
+dependencies = ["jsonschema>=4.23"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.9"]
+
+[project.scripts]
+cfhe-data = "cfhe_data.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]

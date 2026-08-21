@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest-tmp*/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# HCD source files are large and are fetched during each refresh.
+data/raw/*
+!data/raw/.gitkeep
+data/run/
+*.part
+
+# Publication output is always reviewed before it leaves GitHub.
+data/webflow/

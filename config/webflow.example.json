@@ -1,0 +1,16 @@
+{
+  "site_id": "replace-with-webflow-site-id",
+  "collection_id": "replace-with-webflow-collection-id",
+  "jurisdiction_match_field": "slug",
+  "fields": {
+    "acutely_low": "replace-with-field-slug",
+    "extremely_low": "replace-with-field-slug",
+    "very_low": "replace-with-field-slug",
+    "low": "replace-with-field-slug",
+    "moderate": "replace-with-field-slug",
+    "above_moderate": "replace-with-field-slug",
+    "total": "replace-with-field-slug",
+    "undated_permits": "replace-with-field-slug",
+    "last_updated": "replace-with-field-slug"
+  }
+}
