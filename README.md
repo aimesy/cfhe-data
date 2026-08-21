@@ -29,7 +29,7 @@ The repository is the calculation and review layer. It does not publish to Webfl
 - `data/processed/jurisdiction_totals.json`, the canonical input for a future Webflow update
 - `data/processed/source_manifest.json`, with source URLs, resource identifiers, hashes, byte counts, catalog metadata, and DataStore checks
 - `data/processed/audit_summary.json`, with selection totals, removal rules, and conservation checks
-- `data/run/dedupe_decisions.jsonl`, a complete decision ledger preserved as a private workflow artifact
+- `data/run/dedupe_decisions.jsonl`, a complete local decision ledger excluded from Git and GitHub Actions artifacts
 
 The CSV uses the requested labels `Undated Permits` and `Last Updated`. County names use `(Unincorporated)`.
 
@@ -60,7 +60,7 @@ The `Refresh HCD data` workflow runs weekly and may be started manually. It:
 3. checks the exact ordered CSV headers and the DataStore record totals;
 4. applies the audited deduplication profile;
 5. runs the test suite;
-6. preserves the complete sources and decision ledger as private workflow artifacts; and
+6. keeps raw source records and the detailed decision ledger out of downloadable artifacts; and
 7. opens a draft pull request when the derived data changed.
 
 It never merges a pull request or writes to Webflow.

@@ -2,7 +2,7 @@
 
 ## Normal refresh
 
-The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds the jurisdiction totals, runs the tests, and preserves the source plus the full audit as private workflow artifacts.
+The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds the jurisdiction totals, and runs the tests. Raw source records and the detailed decision ledger remain on the temporary runner only and are not uploaded as artifacts.
 
 The uploaded CSV is preferred. If that endpoint is unavailable, the workflow may use the official DataStore dump. The fallback is accepted only when its synthetic `_id` field is the sole extra column, its remaining ordered fields match the pinned source header, and its logical record count matches the DataStore total.
 
@@ -48,4 +48,4 @@ The first Webflow implementation should create a change plan and compare current
 
 ## Recovery
 
-Every source file is named by its content digest. A failed build leaves the prior committed output unchanged. Use the workflow artifact from the failed run to reproduce the error locally. Do not replace a prior source snapshot with a file that has different bytes under the same name.
+Every source file is named by its content digest. A failed build leaves the prior committed output unchanged. Use the workflow logs and the official source configuration to reproduce the error locally. GitHub Actions deliberately does not retain raw snapshots or the detailed decision ledger. Do not replace a prior source snapshot with a file that has different bytes under the same name.

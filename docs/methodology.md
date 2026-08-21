@@ -9,7 +9,7 @@ The pipeline reads two official California Department of Housing and Community D
 
 The HCD data is reported by jurisdictions. HCD states that it does not independently verify most of that information. A county jurisdiction row refers only to the county’s unincorporated territory.
 
-The input CSV files are immutable within a run. Before parsing either file, the build recomputes its byte length, SHA-256 digest, and, when present, MD5 digest and compares them with the manifest. The manifest records the configured URL, final URL after redirects, resource identifier, byte length, HTTP metadata, retrieval time, and digests. Large source files are not committed to Git. Each automated run preserves every available source and audit file as a private workflow artifact, including when a later workflow step fails.
+The input CSV files are immutable within a run. Before parsing either file, the build recomputes its byte length, SHA-256 digest, and, when present, MD5 digest and compares them with the manifest. The manifest records the configured URL, final URL after redirects, resource identifier, byte length, HTTP metadata, retrieval time, and digests. Large source files and the detailed decision ledger are neither committed to Git nor uploaded as GitHub Actions artifacts.
 
 ## Selection
 

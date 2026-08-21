@@ -48,16 +48,6 @@ jobs:
           python -m ruff check src tests
           python -m ruff format --check src tests
           python -m compileall -q src tests
-      - name: Preserve complete source and audit artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: hcd-refresh-${{ github.run_id }}
-          path: |
-            data/raw/*.csv
-            data/run/**
-          if-no-files-found: warn
-          retention-days: 30
       - name: Detect changes
         id: changes
         shell: bash
