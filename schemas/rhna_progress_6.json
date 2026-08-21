@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HCD sixth cycle RHNA progress CSV contract",
+  "type": "object",
+  "required_columns": [
+    "Jurisdiction",
+    "Planning Period",
+    "6th Cycle Started",
+    "VLI UNITS",
+    "RHNA VLI",
+    "LI UNITS",
+    "RHNA LI",
+    "MOD UNITS",
+    "RHNA MOD",
+    "ABOVE MOD UNITS",
+    "RHNA ABOVE MOD"
+  ],
+  "unique_columns": true,
+  "ignored_columns": ["_id"],
+  "allow_additional_columns": false,
+  "ordered_columns": [
+    "Jurisdiction",
+    "Planning Period",
+    "6th Cycle Started",
+    "VLI UNITS",
+    "RHNA VLI",
+    "VLI %",
+    "LI UNITS",
+    "RHNA LI",
+    "LI %",
+    "MOD UNITS",
+    "RHNA MOD",
+    "MOD %",
+    "ABOVE MOD UNITS",
+    "RHNA ABOVE MOD",
+    "ABOVE MOD %"
+  ]
+}

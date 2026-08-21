@@ -1,0 +1,197 @@
+{
+  "invariants": {
+    "category_conservation": true,
+    "jurisdiction_aggregation_reconciles": true,
+    "row_conservation": true
+  },
+  "metadata": {
+    "complete_after": "2026-06-30",
+    "cutoff_year": 2025,
+    "dedupe_profile": "audited-apr-snapshots-v3",
+    "jurisdiction_count": 539,
+    "last_updated": "2026-08-21",
+    "provisional": false,
+    "removed_row_count": 32890,
+    "removed_units": 60735,
+    "retained_row_count": 278260,
+    "selected_row_count": 311150,
+    "selected_units": 563435,
+    "source_manifest_sha256": "97f8e1c63e291f1c43547d82f049f5a7d9c444b7c76fa955611afad3a7e37a28",
+    "undated_permits": 640
+  },
+  "removed_by_rule": {
+    "strong_aggregate_exception": {
+      "categories": {
+        "above_moderate": 1,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 12,
+        "moderate": 2,
+        "very_low": 89
+      },
+      "rows": 2,
+      "units": 104
+    },
+    "strong_linked_snapshot": {
+      "categories": {
+        "above_moderate": 39491,
+        "acutely_low": 16,
+        "extremely_low": 696,
+        "low": 6280,
+        "moderate": 4260,
+        "very_low": 4944
+      },
+      "rows": 29574,
+      "units": 55687
+    },
+    "strong_reliable_snapshot": {
+      "categories": {
+        "above_moderate": 841,
+        "acutely_low": 0,
+        "extremely_low": 5,
+        "low": 177,
+        "moderate": 317,
+        "very_low": 238
+      },
+      "rows": 560,
+      "units": 1578
+    },
+    "strong_reused_id_exception": {
+      "categories": {
+        "above_moderate": 0,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 2,
+        "moderate": 2,
+        "very_low": 21
+      },
+      "rows": 1,
+      "units": 25
+    },
+    "strong_split_increment": {
+      "categories": {
+        "above_moderate": 42,
+        "acutely_low": 0,
+        "extremely_low": 45,
+        "low": 36,
+        "moderate": 1,
+        "very_low": 8
+      },
+      "rows": 43,
+      "units": 132
+    },
+    "weak_dual_location_snapshot": {
+      "categories": {
+        "above_moderate": 27,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 6,
+        "moderate": 1,
+        "very_low": 0
+      },
+      "rows": 34,
+      "units": 34
+    },
+    "weak_house_number_in_apn_transform": {
+      "categories": {
+        "above_moderate": 171,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 0,
+        "moderate": 0,
+        "very_low": 0
+      },
+      "rows": 1,
+      "units": 171
+    },
+    "weak_literal_snapshot": {
+      "categories": {
+        "above_moderate": 755,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 0,
+        "moderate": 361,
+        "very_low": 19
+      },
+      "rows": 808,
+      "units": 1135
+    },
+    "weak_project_and_dual_location_snapshot": {
+      "categories": {
+        "above_moderate": 1708,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 1,
+        "moderate": 86,
+        "very_low": 0
+      },
+      "rows": 1793,
+      "units": 1795
+    },
+    "weak_project_snapshot": {
+      "categories": {
+        "above_moderate": 73,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 0,
+        "moderate": 1,
+        "very_low": 0
+      },
+      "rows": 74,
+      "units": 74
+    }
+  },
+  "removed_categories": {
+    "above_moderate": 43109,
+    "acutely_low": 16,
+    "extremely_low": 746,
+    "low": 6514,
+    "moderate": 5031,
+    "very_low": 5319
+  },
+  "retained_categories": {
+    "above_moderate": 354496,
+    "acutely_low": 479,
+    "extremely_low": 10756,
+    "low": 59679,
+    "moderate": 42037,
+    "very_low": 35253
+  },
+  "selected_categories": {
+    "above_moderate": 397605,
+    "acutely_low": 495,
+    "extremely_low": 11502,
+    "low": 66193,
+    "moderate": 47068,
+    "very_low": 40572
+  },
+  "selection": {
+    "max_report_year": 2025,
+    "planning_periods_without_selected_rows": [
+      "BIGGS",
+      "DORRIS",
+      "DOS PALOS",
+      "GRIDLEY",
+      "HUGHSON",
+      "INDUSTRY",
+      "LAGUNA WOODS",
+      "LOYALTON",
+      "MADERA",
+      "ORLAND",
+      "POINT ARENA",
+      "SAN JOAQUIN",
+      "SAND CITY",
+      "TEHAMA",
+      "TULELAKE",
+      "TURLOCK",
+      "VERNON",
+      "WOODLAKE"
+    ],
+    "raw_jurisdiction_count": 534,
+    "raw_jurisdictions_without_planning_period": [],
+    "raw_row_count": 921393,
+    "reported_total_mismatch_rows": 0,
+    "reported_total_net_difference": 0,
+    "selected_row_count": 311150
+  }
+}

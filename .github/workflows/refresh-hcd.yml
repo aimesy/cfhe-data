@@ -1,0 +1,82 @@
+name: Refresh HCD data
+
+on:
+  workflow_dispatch:
+    inputs:
+      cutoff_year:
+        description: Last permit year to include
+        required: true
+        default: "2025"
+  schedule:
+    - cron: "37 15 * * 5"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-hcd
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      CUTOFF_YEAR: ${{ inputs.cutoff_year || '2025' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: python -m pip install --disable-pip-version-check -e ".[dev]"
+      - name: Fetch and build
+        run: >-
+          cfhe-data refresh
+          --sources config/sources.toml
+          --raw-dir data/raw
+          --output-dir data/processed
+          --audit-dir data/run
+          --cutoff-year "$CUTOFF_YEAR"
+      - name: Verify
+        run: |
+          python -m pytest -q
+          python -m ruff check src tests
+          python -m ruff format --check src tests
+          python -m compileall -q src tests
+      - name: Detect changes
+        id: changes
+        shell: bash
+        run: |
+          if [[ -z "$(git status --porcelain -- data/processed)" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Open draft refresh pull request
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="data-refresh/${GITHUB_RUN_ID}"
+          git config user.name "cfhe-data bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add -- \
+            data/processed/source_manifest.json \
+            data/processed/jurisdiction_totals.csv \
+            data/processed/jurisdiction_totals.json \
+            data/processed/audit_summary.json
+          git commit -m "Refresh HCD APR data"
+          git push origin "$branch"
+          gh pr create \
+            --draft \
+            --base master \
+            --head "$branch" \
+            --title "Refresh HCD APR data" \
+            --body "Automated HCD source refresh. Review the source manifest, audit summary, and jurisdiction changes before merging. This workflow does not publish to Webflow."
