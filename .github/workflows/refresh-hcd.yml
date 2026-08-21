@@ -27,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: master
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -86,7 +86,7 @@ jobs:
           git push origin "$branch"
           gh pr create \
             --draft \
-            --base main \
+            --base master \
             --head "$branch" \
             --title "Refresh HCD APR data" \
             --body "Automated HCD source refresh. Review the source manifest, audit summary, and jurisdiction changes before merging. This workflow does not publish to Webflow."
