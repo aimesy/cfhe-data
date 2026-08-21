@@ -21,8 +21,6 @@ HCD APR Table A2 + sixth cycle planning periods
         Webflow change plan, then approval
 ```
 
-The repository is the calculation and review layer. It does not publish to Webflow.
-
 ## What it produces
 
 - `data/processed/jurisdiction_totals.csv`, with one row per sixth cycle jurisdiction
