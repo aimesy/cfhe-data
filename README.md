@@ -85,3 +85,5 @@ An eventual Webflow apply workflow requires a protected GitHub Environment, a We
 - Sixth cycle RHNA resource `1e80a9cf-724c-432d-8374-e9708a6a92dc`
 
 HCD describes the records as jurisdiction reported data that it generally does not independently verify. HCD also states that the previous calendar year remains incomplete until June 30.
+
+This data is a charitable gift to Yes In My Back Yard, a California nonprofit public benefit corporation recognized as exempt from federal income tax under Internal Revenue Code § 501(c)(3), EIN 32-0610451; to the extent I hold transferable rights in the data, its selection and arrangement, and accompanying materials, I irrevocably give, assign, and transfer all right, title, and interest in those rights without consideration.
