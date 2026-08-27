@@ -17,7 +17,12 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 from .dedupe import deduplicate
-from .models import DEFAULT_CATEGORY_FIELDS, PermitRecord
+from .models import (
+    DEFAULT_CATEGORY_FIELDS,
+    DedupAuditEntry,
+    DedupResult,
+    PermitRecord,
+)
 from .normalize import normalized_key
 from .schema import (
     CsvContract,
@@ -77,6 +82,7 @@ class BuildArtifacts:
     jurisdiction_csv: Path
     audit_summary: Path
     decision_ledger: Path
+    review_ledger: Path
     selected_rows: int
     retained_rows: int
     removed_rows: int
@@ -90,6 +96,7 @@ class AirtableBuildArtifacts:
     jurisdiction_json: Path
     audit_summary: Path
     decision_ledger: Path
+    review_ledger: Path
     selected_rows: int
     retained_rows: int
     removed_rows: int
@@ -268,6 +275,24 @@ def _vector_sum(records: Sequence[PermitRecord]) -> tuple[int, ...]:
     return tuple(totals)
 
 
+def _removal_rule_stats(result: DedupResult) -> dict[str, dict[str, object]]:
+    audit_by_index = {entry.source_index: entry for entry in result.audit}
+    rule_stats: dict[str, dict[str, object]] = {}
+    for rule in sorted(result.counts_by_rule()):
+        records = tuple(
+            record
+            for record in result.removed
+            if audit_by_index[record.source_index].rule == rule
+        )
+        categories = _vector_sum(records)
+        rule_stats[rule] = {
+            "rows": len(records),
+            "units": sum(categories),
+            "categories": dict(zip(CATEGORY_NAMES, categories)),
+        }
+    return rule_stats
+
+
 def _manifest_digest(manifest: Mapping[str, object]) -> str:
     payload = json.dumps(
         manifest,
@@ -357,6 +382,85 @@ def _atomic_write(path: Path, text: str) -> None:
 
 def _json_text(value: object) -> str:
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
+def _decision_ledger_row(
+    record: PermitRecord,
+    audit: DedupAuditEntry | None,
+    *,
+    cycle: str | None = None,
+) -> dict[str, object]:
+    row: dict[str, object] = {
+        "source_record_index": record.source_index,
+        "csv_physical_line": record.csv_physical_line,
+        "row_sha256": hashlib.sha256(
+            json.dumps(
+                record.raw_row,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest(),
+        "jurisdiction": record.jurisdiction,
+        "report_year": record.report_year,
+        "permit_date": record.permit_date.isoformat() if record.permit_date else None,
+        "categories": dict(zip(CATEGORY_NAMES, record.categories)),
+        "units": record.units,
+        "decision": "removed_earlier_snapshot" if audit else "retained",
+    }
+    if cycle is not None:
+        row["cycle"] = cycle
+    if audit is not None:
+        row.update(
+            {
+                "rule": audit.rule,
+                "matched_source_indices": list(audit.matched_source_indices),
+                "retained_report_year": audit.retained_report_year,
+                "retained_source_indices": list(audit.retained_source_indices),
+                "lineage_resolution": (
+                    "direct"
+                    if audit.matched_source_indices == audit.retained_source_indices
+                    else "transitive"
+                ),
+                "evidence": dict(audit.details),
+            }
+        )
+    return row
+
+
+def _write_decision_ledgers(
+    *,
+    selected: Sequence[PermitRecord],
+    result: DedupResult,
+    decision_ledger: Path,
+    review_ledger: Path,
+    cycles: Mapping[str, str] | None = None,
+) -> None:
+    """Write the complete ledger and a compact closed set of review evidence."""
+
+    audit_by_index = {entry.source_index: entry for entry in result.audit}
+    review_source_indices = set(audit_by_index)
+    for audit in result.audit:
+        review_source_indices.update(audit.matched_source_indices)
+        review_source_indices.update(audit.retained_source_indices)
+    ledger_lines: list[str] = []
+    review_lines: list[str] = []
+    for record in sorted(selected, key=lambda item: item.source_index):
+        audit = audit_by_index.get(record.source_index)
+        cycle = cycles[record.jurisdiction] if cycles is not None else None
+        ledger_row = _decision_ledger_row(record, audit, cycle=cycle)
+        rendered = json.dumps(
+            ledger_row, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+        )
+        ledger_lines.append(rendered)
+        if record.source_index in review_source_indices:
+            review_lines.append(rendered)
+    _atomic_write(
+        decision_ledger, "\n".join(ledger_lines) + ("\n" if ledger_lines else "")
+    )
+    _atomic_write(
+        review_ledger, "\n".join(review_lines) + ("\n" if review_lines else "")
+    )
 
 
 def _load_airtable_cycle_policy(
@@ -574,6 +678,7 @@ def build_airtable_artifacts(
         "selected_categories": dict(zip(CATEGORY_NAMES, selected_categories)),
         "retained_categories": dict(zip(CATEGORY_NAMES, retained_categories)),
         "removed_categories": dict(zip(CATEGORY_NAMES, removed_categories)),
+        "removed_by_rule": _removal_rule_stats(result),
         "invariants": {
             "row_conservation": True,
             "category_conservation": True,
@@ -587,56 +692,22 @@ def build_airtable_artifacts(
     jurisdiction_json = output_dir / "airtable_totals.json"
     audit_summary = output_dir / "airtable_audit_summary.json"
     decision_ledger = audit_dir / "airtable_dedupe_decisions.jsonl"
+    review_ledger = audit_dir / "airtable_dedupe_review.jsonl"
     _atomic_write(jurisdiction_json, _json_text(jurisdiction_payload))
     _atomic_write(audit_summary, _json_text(audit_payload))
-
-    audit_by_index = {entry.source_index: entry for entry in result.audit}
-    ledger_lines: list[str] = []
-    for record in sorted(selected, key=lambda item: item.source_index):
-        audit = audit_by_index.get(record.source_index)
-        ledger_row: dict[str, object] = {
-            "source_record_index": record.source_index,
-            "csv_physical_line": record.csv_physical_line,
-            "row_sha256": hashlib.sha256(
-                json.dumps(
-                    record.raw_row,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                    ensure_ascii=False,
-                ).encode("utf-8")
-            ).hexdigest(),
-            "jurisdiction": record.jurisdiction,
-            "cycle": cycles[record.jurisdiction],
-            "report_year": record.report_year,
-            "permit_date": record.permit_date.isoformat()
-            if record.permit_date
-            else None,
-            "categories": dict(zip(CATEGORY_NAMES, record.categories)),
-            "units": record.units,
-            "decision": "removed_earlier_snapshot" if audit else "retained",
-        }
-        if audit:
-            ledger_row.update(
-                {
-                    "rule": audit.rule,
-                    "retained_report_year": audit.retained_report_year,
-                    "retained_source_indices": list(audit.retained_source_indices),
-                    "evidence": dict(audit.details),
-                }
-            )
-        ledger_lines.append(
-            json.dumps(
-                ledger_row, sort_keys=True, ensure_ascii=False, separators=(",", ":")
-            )
-        )
-    _atomic_write(
-        decision_ledger, "\n".join(ledger_lines) + ("\n" if ledger_lines else "")
+    _write_decision_ledgers(
+        selected=selected,
+        result=result,
+        decision_ledger=decision_ledger,
+        review_ledger=review_ledger,
+        cycles=cycles,
     )
 
     return AirtableBuildArtifacts(
         jurisdiction_json=jurisdiction_json,
         audit_summary=audit_summary,
         decision_ledger=decision_ledger,
+        review_ledger=review_ledger,
         selected_rows=len(selected),
         retained_rows=len(result.retained),
         removed_rows=len(result.removed),
@@ -752,20 +823,7 @@ def build_artifacts(
     ):
         raise AssertionError("Jurisdiction aggregation does not reconcile")
 
-    audit_by_index = {entry.source_index: entry for entry in result.audit}
-    rule_stats: dict[str, dict[str, object]] = {}
-    for rule in sorted(result.counts_by_rule()):
-        records = tuple(
-            record
-            for record in result.removed
-            if audit_by_index[record.source_index].rule == rule
-        )
-        categories = _vector_sum(records)
-        rule_stats[rule] = {
-            "rows": len(records),
-            "units": sum(categories),
-            "categories": dict(zip(CATEGORY_NAMES, categories)),
-        }
+    rule_stats = _removal_rule_stats(result)
 
     metadata = {
         "cutoff_year": cutoff_year,
@@ -810,6 +868,7 @@ def build_artifacts(
     jurisdiction_csv = output_dir / "jurisdiction_totals.csv"
     audit_summary = output_dir / "audit_summary.json"
     decision_ledger = audit_dir / "dedupe_decisions.jsonl"
+    review_ledger = audit_dir / "dedupe_review.jsonl"
     _atomic_write(manifest_path, _json_text(source_manifest))
     _atomic_write(jurisdiction_json, _json_text(jurisdiction_payload))
     _atomic_write(audit_summary, _json_text(audit_payload))
@@ -834,46 +893,11 @@ def build_artifacts(
         )
     _atomic_write(jurisdiction_csv, csv_buffer.getvalue())
 
-    ledger_lines: list[str] = []
-    for record in sorted(selected, key=lambda item: item.source_index):
-        audit = audit_by_index.get(record.source_index)
-        raw_hash = hashlib.sha256(
-            json.dumps(
-                record.raw_row,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            ).encode("utf-8")
-        ).hexdigest()
-        ledger_row: dict[str, object] = {
-            "source_record_index": record.source_index,
-            "csv_physical_line": record.csv_physical_line,
-            "row_sha256": raw_hash,
-            "jurisdiction": record.jurisdiction,
-            "report_year": record.report_year,
-            "permit_date": record.permit_date.isoformat()
-            if record.permit_date
-            else None,
-            "categories": dict(zip(CATEGORY_NAMES, record.categories)),
-            "units": record.units,
-            "decision": "removed_earlier_snapshot" if audit else "retained",
-        }
-        if audit:
-            ledger_row.update(
-                {
-                    "rule": audit.rule,
-                    "retained_report_year": audit.retained_report_year,
-                    "retained_source_indices": list(audit.retained_source_indices),
-                    "evidence": dict(audit.details),
-                }
-            )
-        ledger_lines.append(
-            json.dumps(
-                ledger_row, sort_keys=True, ensure_ascii=False, separators=(",", ":")
-            )
-        )
-    _atomic_write(
-        decision_ledger, "\n".join(ledger_lines) + ("\n" if ledger_lines else "")
+    _write_decision_ledgers(
+        selected=selected,
+        result=result,
+        decision_ledger=decision_ledger,
+        review_ledger=review_ledger,
     )
 
     return BuildArtifacts(
@@ -881,6 +905,7 @@ def build_artifacts(
         jurisdiction_csv=jurisdiction_csv,
         audit_summary=audit_summary,
         decision_ledger=decision_ledger,
+        review_ledger=review_ledger,
         selected_rows=len(selected),
         retained_rows=len(result.retained),
         removed_rows=len(result.removed),

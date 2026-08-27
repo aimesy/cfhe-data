@@ -31,8 +31,10 @@ def test_airtable_apply_reports_api_client_result_fields(
 ) -> None:
     totals_path = tmp_path / "totals.json"
     config_path = tmp_path / "config.json"
+    cycle_policy_path = tmp_path / "cycle-policy.json"
     totals_path.write_text("{}", encoding="utf-8")
     config_path.write_text("{}", encoding="utf-8")
+    cycle_policy_path.write_text("{}", encoding="utf-8")
 
     class StubClient:
         def update_records(self, updates, *, verify_schema):
@@ -73,6 +75,7 @@ def test_airtable_apply_reports_api_client_result_fields(
     args = argparse.Namespace(
         totals=totals_path,
         config=config_path,
+        cycle_policy=cycle_policy_path,
         git_sha="a" * 40,
         plan_output=None,
         apply=True,

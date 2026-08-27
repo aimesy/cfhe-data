@@ -150,6 +150,33 @@ def test_weak_literal_group_is_guarded_when_latest_count_is_smaller() -> None:
     assert RULE_WEAK_LITERAL not in result.counts_by_rule()
 
 
+def test_audit_lineage_resolves_an_intermediate_row_removed_by_a_later_rule() -> None:
+    earlier = row(
+        YEAR="2023",
+        JURS_TRACKING_ID="N/A",
+        PROJECT_NAME="River Homes",
+        STREET_ADDRESS="100 Main Street",
+    )
+    intermediate = deepcopy(earlier)
+    intermediate["YEAR"] = "2024"
+    latest = deepcopy(intermediate)
+    latest["YEAR"] = "2025"
+    latest["JURS_TRACKING_ID"] = ""
+
+    result = deduplicate_rows([earlier, intermediate, latest])
+
+    assert result.removed_source_indices == {2, 3}
+    assert [record.source_index for record in result.retained] == [4]
+    audits = {entry.source_index: entry for entry in result.audit}
+    assert audits[2].rule == RULE_WEAK_LITERAL
+    assert audits[2].matched_source_indices == (3,)
+    assert audits[2].retained_source_indices == (4,)
+    assert audits[2].retained_report_year == 2025
+    assert audits[3].matched_source_indices == (4,)
+    assert audits[3].retained_source_indices == (4,)
+    assert audits[3].retained_report_year == 2025
+
+
 def test_strong_residual_rule_has_a_named_row_audit() -> None:
     earlier = row(
         STREET_ADDRESS="100 Main Street",

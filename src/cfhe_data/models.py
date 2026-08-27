@@ -314,6 +314,7 @@ class DedupAuditEntry:
     jurisdiction: str
     permit_date: dt.date | None
     tracking_id: str
+    matched_source_indices: tuple[int, ...] = ()
     details: tuple[tuple[str, str], ...] = ()
 
     def as_dict(self) -> dict[str, object]:
@@ -324,6 +325,7 @@ class DedupAuditEntry:
             "report_year": self.report_year,
             "retained_report_year": self.retained_report_year,
             "retained_source_indices": list(self.retained_source_indices),
+            "matched_source_indices": list(self.matched_source_indices),
             "jurisdiction": self.jurisdiction,
             "permit_date": self.permit_date.isoformat() if self.permit_date else None,
             "tracking_id": self.tracking_id,

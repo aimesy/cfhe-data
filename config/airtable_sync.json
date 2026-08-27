@@ -11,6 +11,10 @@
     "name": "fldw8G1J4UIAvd7Yv",
     "unincorporated": "fldgi3VnJh5F5sIOK"
   },
+  "jurisdiction_field_options_sha256": {
+    "name": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "unincorporated": "3a81b4a0cfd73a29214b9281a2f35534fd2fb9ea37f03995c399a6a21fd286b6"
+  },
   "rhna_fields": {
     "jurisdiction_link": "fld76ruskUKCuiEtW",
     "cycle_link": "fldFhohelRMLKuFGv",
@@ -24,5 +28,19 @@
     "rhna_start": "fldyIdnmYUnKxeRNq",
     "rhna_end": "fldFRm5ZcZHAfa5sa",
     "total_progress_override": "fld9HQz1i9DipXRht"
+  },
+  "rhna_field_options_sha256": {
+    "jurisdiction_link": "e2c559df6dd5a15b31f49c60cdaed84a7d7fc900e624509388a3177fd2f4a16f",
+    "cycle_link": "96fe0b1d06117bf4dfd74cb5c4a40c29561b5ea4739a37813784b5cc125ea9ba",
+    "cycle": "5cfe7fb9338d6c4a54a291869aa498d906489c36add4b79c6fb2c43bdfef2a4c",
+    "current": "efb9cd9ffdb12001f16b54a937dab7f37db7bc031f90f409489a1425a021d26d",
+    "correct_link": "c3f16555209562504921ba0363eedbb9e266cf345cc21e34611bab793453f569",
+    "vli": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "li": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "mi": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "ami": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "rhna_start": "b3d47e0e32b20407e0c6b3aa9f2c815e19074fd2842d021cb6b9928d52068eec",
+    "rhna_end": "8fc54a4b02cf3f798cca4082e93cb6f2076c341edb86d5bfe030425dbf5d5a59",
+    "total_progress_override": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528"
   }
 }

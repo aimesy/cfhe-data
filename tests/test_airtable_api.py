@@ -26,6 +26,7 @@ BASE_ID = "appBase123"
 TABLE_ID = "tblTable123"
 FIELD_VLI = "fldVli123"
 FIELD_LI = "fldLi123"
+FIELD_LINK = "fldLink123"
 TOKEN = "test-token-never-log"
 
 
@@ -45,14 +46,26 @@ def record(record_id: str, **fields: Any) -> dict[str, Any]:
 
 def schema_payload(
     field_ids: tuple[str, ...] = (FIELD_VLI, FIELD_LI),
+    *,
+    options_by_id: Mapping[str, object] | None = None,
 ) -> dict[str, Any]:
+    options_by_id = options_by_id or {}
     return {
         "tables": [
             {
                 "id": TABLE_ID,
                 "name": "RHNA & HE",
                 "fields": [
-                    {"id": field_id, "name": field_id, "type": "number"}
+                    {
+                        "id": field_id,
+                        "name": field_id,
+                        "type": "number",
+                        **(
+                            {"options": options_by_id[field_id]}
+                            if field_id in options_by_id
+                            else {}
+                        ),
+                    }
                     for field_id in field_ids
                 ],
             }
@@ -100,6 +113,7 @@ class StatefulTransport:
         self.ambiguous_after_apply = False
         self.mismatch_after_patch = False
         self.transient_patch_statuses: list[int] = []
+        self.mutate_after_next_read: tuple[str, str, Any] | None = None
 
     def request(
         self,
@@ -124,7 +138,12 @@ class StatefulTransport:
             return response(schema_payload())
         if method == "GET":
             record_id = path.rsplit("/", 1)[-1]
-            return response(record(record_id, **self.records[record_id]))
+            result = response(record(record_id, **self.records[record_id]))
+            if self.mutate_after_next_read is not None:
+                target_id, field_id, value = self.mutate_after_next_read
+                self.records[target_id][field_id] = value
+                self.mutate_after_next_read = None
+            return result
         if method != "PATCH" or body is None:
             raise AssertionError(f"Unexpected request: {method} {url}")
 
@@ -161,6 +180,7 @@ def client(
     transport: Any,
     *,
     fields: tuple[str, ...] = (FIELD_VLI, FIELD_LI),
+    writable_fields: tuple[str, ...] | None = None,
     sleeps: list[float] | None = None,
     max_retries: int = 2,
 ) -> AirtableClient:
@@ -170,6 +190,7 @@ def client(
         base_id=BASE_ID,
         table_id=TABLE_ID,
         managed_field_ids=fields,
+        writable_field_ids=fields if writable_fields is None else writable_fields,
         transport=transport,
         max_retries=max_retries,
         retry_base_seconds=0.5,
@@ -192,13 +213,20 @@ def update(
 
 
 def test_schema_get_verifies_exact_managed_field_ids() -> None:
-    transport = QueueTransport([response(schema_payload())])
+    options = {"precision": 0}
+    transport = QueueTransport(
+        [response(schema_payload(options_by_id={FIELD_VLI: options}))]
+    )
 
     result = client(transport).get_table_schema()
 
     assert result["complete"] is True
     assert result["managed_field_ids"] == [FIELD_LI, FIELD_VLI]
+    assert result["writable_field_ids"] == [FIELD_LI, FIELD_VLI]
     assert result["field_count"] == 2
+    fields = {item["id"]: item for item in result["fields"]}
+    assert fields[FIELD_VLI]["options"] == options
+    assert fields[FIELD_LI]["options"] is None
     call = transport.calls[0]
     assert call["method"] == "GET"
     assert call["url"].endswith(f"/meta/bases/{BASE_ID}/tables")
@@ -266,12 +294,13 @@ def test_update_checks_schema_prevalues_and_readback() -> None:
     assert [call["method"] for call in transport.calls] == [
         "GET",
         "GET",
+        "GET",
         "PATCH",
         "GET",
     ]
-    patch = json.loads(transport.calls[2]["body"])
+    patch = json.loads(transport.calls[3]["body"])
     patch_query = urllib.parse.parse_qs(
-        urllib.parse.urlparse(transport.calls[2]["url"]).query
+        urllib.parse.urlparse(transport.calls[3]["url"]).query
     )
     assert patch_query == {}
     assert patch == {
@@ -323,6 +352,19 @@ def test_changed_prevalue_fails_before_a_patch() -> None:
     assert transport.patch_count == 0
     assert caught.value.conflicts == {"recOne123": (FIELD_VLI,)}
     assert "999" not in str(caught.value)
+
+
+def test_second_prepatch_read_catches_an_interactive_edit() -> None:
+    transport = StatefulTransport({"recOne123": {FIELD_VLI: 1, FIELD_LI: 2}})
+    transport.mutate_after_next_read = ("recOne123", FIELD_VLI, 999)
+
+    with pytest.raises(AirtablePreconditionError) as caught:
+        client(transport).update_records(
+            [update("recOne123", (1, 2), (10, 20))], verify_schema=False
+        )
+
+    assert transport.patch_count == 0
+    assert caught.value.conflicts == {"recOne123": (FIELD_VLI,)}
 
 
 def test_mixed_old_and_new_fields_fail_closed() -> None:
@@ -475,6 +517,37 @@ def test_updates_require_exact_managed_ids_and_matching_prevalues(
         client(transport).update_records([bad_update], verify_schema=False)
 
     assert transport.calls == []
+
+
+def test_read_fields_are_not_writable_without_explicit_allowlisting() -> None:
+    transport = QueueTransport([])
+    api = client(
+        transport,
+        fields=(FIELD_VLI, FIELD_LI, FIELD_LINK),
+        writable_fields=(FIELD_VLI, FIELD_LI),
+    )
+    link_update = RecordUpdate(
+        "recOne123",
+        {FIELD_LINK: ["recOld123"]},
+        {FIELD_LINK: ["recNew123"]},
+    )
+
+    with pytest.raises(AirtableConfigurationError, match="unwritable"):
+        api.update_records([link_update], verify_schema=False)
+
+    assert transport.calls == []
+
+
+def test_writable_fields_must_be_managed_read_fields() -> None:
+    with pytest.raises(AirtableConfigurationError, match="subset"):
+        AirtableClient(
+            token=TOKEN,
+            base_id=BASE_ID,
+            table_id=TABLE_ID,
+            managed_field_ids=(FIELD_VLI, FIELD_LI),
+            writable_field_ids=(FIELD_VLI, FIELD_LINK),
+            transport=QueueTransport([]),
+        )
 
 
 def test_python_bool_does_not_equal_numeric_prevalue() -> None:

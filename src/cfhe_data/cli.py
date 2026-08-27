@@ -111,8 +111,10 @@ def _refresh(args: argparse.Namespace) -> int:
                 "jurisdiction_json": str(artifacts.jurisdiction_json),
                 "audit_summary": str(artifacts.audit_summary),
                 "decision_ledger": str(artifacts.decision_ledger),
+                "review_ledger": str(artifacts.review_ledger),
                 "airtable_totals": str(airtable_artifacts.jurisdiction_json),
                 "airtable_audit_summary": str(airtable_artifacts.audit_summary),
+                "airtable_review_ledger": str(airtable_artifacts.review_ledger),
             },
             indent=2,
         )
@@ -154,6 +156,8 @@ def _build(args: argparse.Namespace) -> int:
                 "total_units": artifacts.total_units,
                 "airtable_total_units": airtable_artifacts.total_units,
                 "airtable_totals": str(airtable_artifacts.jurisdiction_json),
+                "review_ledger": str(artifacts.review_ledger),
+                "airtable_review_ledger": str(airtable_artifacts.review_ledger),
             },
             indent=2,
         )
@@ -211,11 +215,13 @@ def _airtable_sync(args: argparse.Namespace) -> int:
         )
     totals = _read_object(args.totals, "Airtable totals")
     config = _read_object(args.config, "Airtable sync config")
+    cycle_policy = _read_object(args.cycle_policy, "Airtable cycle policy")
     snapshot, _client = fetch_airtable_snapshot(token=token, config=config)
     plan = build_airtable_sync_plan(
         totals=totals,
         snapshot=snapshot,
         config=config,
+        cycle_policy=cycle_policy,
         git_sha=args.git_sha,
     )
     if args.plan_output is not None:
@@ -240,6 +246,7 @@ def _airtable_sync(args: argparse.Namespace) -> int:
         totals=totals,
         snapshot=final_snapshot,
         config=config,
+        cycle_policy=cycle_policy,
         git_sha=args.git_sha,
     )
     if final_plan["apply_eligible"] is not True or final_plan["change_count"] != 0:
@@ -349,6 +356,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     airtable_sync.add_argument(
         "--config", type=Path, default=Path("config/airtable_sync.json")
+    )
+    airtable_sync.add_argument(
+        "--cycle-policy", type=Path, default=Path("config/airtable_cycles.json")
     )
     airtable_sync.add_argument("--git-sha", required=True)
     airtable_sync.add_argument("--plan-output", type=Path)

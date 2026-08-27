@@ -11,7 +11,7 @@ import datetime as dt
 import re
 from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import combinations
 
 from .models import (
@@ -516,19 +516,105 @@ def _audit_entry(
     records: Sequence[PermitRecord],
     details: tuple[tuple[str, str], ...] = (),
 ) -> DedupAuditEntry:
+    matched_source_indices = tuple(
+        records[index].source_index for index in retained_indices
+    )
     return DedupAuditEntry(
         source_index=record.source_index,
         csv_physical_line=record.csv_physical_line,
         rule=rule,
         report_year=record.report_year,
         retained_report_year=retained_year,
-        retained_source_indices=tuple(
-            records[index].source_index for index in retained_indices
-        ),
+        retained_source_indices=matched_source_indices,
         jurisdiction=record.jurisdiction,
         permit_date=record.permit_date,
         tracking_id=record.tracking_id or record.weak_tracking_id,
+        matched_source_indices=matched_source_indices,
         details=details,
+    )
+
+
+def _resolve_final_audit_lineage(
+    records: Sequence[PermitRecord],
+    active_indices: set[int],
+    audits: Sequence[DedupAuditEntry],
+) -> tuple[DedupAuditEntry, ...]:
+    """Resolve every audit reference to rows retained after every rule pass."""
+
+    records_by_source = {record.source_index: record for record in records}
+    retained_sources = {records[index].source_index for index in active_indices}
+    audits_by_source = {entry.source_index: entry for entry in audits}
+    if len(audits_by_source) != len(audits):
+        raise AssertionError("Every removed source row must have one audit entry")
+
+    resolved_by_source: dict[int, tuple[int, ...]] = {}
+    visiting: set[int] = set()
+
+    def resolve(source_index: int) -> tuple[int, ...]:
+        if source_index in retained_sources:
+            return (source_index,)
+        cached = resolved_by_source.get(source_index)
+        if cached is not None:
+            return cached
+        if source_index in visiting:
+            raise AssertionError("Deduplication audit lineage contains a cycle")
+        entry = audits_by_source.get(source_index)
+        if entry is None:
+            raise AssertionError(
+                "Deduplication audit references a row that was neither retained nor audited"
+            )
+        if not entry.matched_source_indices:
+            raise AssertionError("Deduplication audit entry has no matched source row")
+
+        visiting.add(source_index)
+        terminals: set[int] = set()
+        for matched_source in entry.matched_source_indices:
+            if matched_source not in records_by_source:
+                raise AssertionError(
+                    "Deduplication audit references a source row outside the selected input"
+                )
+            terminals.update(resolve(matched_source))
+        visiting.remove(source_index)
+        if not terminals:
+            raise AssertionError(
+                "Deduplication audit lineage has no retained terminal row"
+            )
+        result = tuple(sorted(terminals))
+        resolved_by_source[source_index] = result
+        return result
+
+    resolved_audits: list[DedupAuditEntry] = []
+    for entry in audits:
+        retained_source_indices = resolve(entry.source_index)
+        retained_years = {
+            records_by_source[source_index].report_year
+            for source_index in retained_source_indices
+        }
+        if len(retained_years) != 1:
+            raise AssertionError(
+                "Deduplication audit lineage terminates in more than one report year"
+            )
+        retained_year = next(iter(retained_years))
+        if retained_year <= entry.report_year:
+            raise AssertionError(
+                "Deduplication audit lineage does not terminate in a later report year"
+            )
+        if any(
+            source_index not in retained_sources
+            for source_index in retained_source_indices
+        ):
+            raise AssertionError(
+                "Deduplication audit lineage contains a nonretained terminal row"
+            )
+        resolved_audits.append(
+            replace(
+                entry,
+                retained_report_year=retained_year,
+                retained_source_indices=retained_source_indices,
+            )
+        )
+    return tuple(
+        sorted(resolved_audits, key=lambda entry: (entry.source_index, entry.rule))
     )
 
 
@@ -875,10 +961,10 @@ def deduplicate_records(records: Iterable[PermitRecord]) -> DedupResult:
     removed = tuple(
         record for index, record in enumerate(materialized) if index not in active
     )
-    audits.sort(key=lambda entry: (entry.source_index, entry.rule))
     if len(audits) != len(removed):
         raise AssertionError("Every removed row must have exactly one audit entry")
-    return DedupResult(retained=retained, removed=removed, audit=tuple(audits))
+    resolved_audits = _resolve_final_audit_lineage(materialized, active, audits)
+    return DedupResult(retained=retained, removed=removed, audit=resolved_audits)
 
 
 def deduplicate(records: Iterable[PermitRecord]) -> DedupeResult:

@@ -63,6 +63,18 @@ jobs:
           python -m ruff check src tests
           python -m ruff format --check src tests
           python -m compileall -q src tests
+      - name: Upload deduplication review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: deduplication-review-${{ github.run_id }}
+          path: |
+            data/run/dedupe_review.jsonl
+            data/run/airtable_dedupe_review.jsonl
+            data/processed/audit_summary.json
+            data/processed/airtable_audit_summary.json
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 90
       - name: Detect changes
         id: changes
         shell: bash
@@ -79,6 +91,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           branch="data-refresh/${GITHUB_RUN_ID}"
+          review_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body="Automated HCD source refresh. Review the source manifest, audit summaries, and jurisdiction changes before merging. Compact decision ledgers containing each removal plus every directly matched and final referenced row are attached to the workflow run at ${review_url}. Raw source rows and the complete local ledgers are not uploaded. This workflow does not publish directly. After merge, the protected Airtable job independently revalidates and publishes an eligible plan."
           git config user.name "cfhe-data bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
@@ -96,4 +110,4 @@ jobs:
             --base master \
             --head "$branch" \
             --title "Refresh HCD APR data" \
-            --body "Automated HCD source refresh. Review the source manifest, audit summaries, and jurisdiction changes before merging. This workflow does not publish directly. After merge, the protected Airtable job independently revalidates and publishes an eligible plan."
+            --body "$body"

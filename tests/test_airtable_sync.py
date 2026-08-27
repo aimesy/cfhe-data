@@ -8,6 +8,7 @@ import pytest
 
 from cfhe_data.airtable_sync import (
     AirtableSyncBlockedError,
+    AirtableSyncConfigurationError,
     AirtableSyncSnapshotError,
     AirtableSyncStateChangedError,
     build_airtable_sync_plan,
@@ -20,6 +21,20 @@ from cfhe_data.webflow import canonical_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = json.loads((ROOT / "config/airtable_sync.json").read_text(encoding="utf-8"))
+CONFIG["jurisdiction_field_options_sha256"] = {
+    name: canonical_sha256(None) for name in CONFIG["jurisdiction_fields"]
+}
+CONFIG["rhna_field_options_sha256"] = {
+    name: canonical_sha256(None) for name in CONFIG["rhna_fields"]
+}
+CYCLE_POLICY = {
+    "policy_version": 1,
+    "default_cycle": "6th",
+    "expected_jurisdiction_count": 2,
+    "expected_cycle_counts": {"6th": 1, "7th": 1},
+    "overrides": [],
+    "source": "https://www.hcd.ca.gov/rhna/seventh-cycle",
+}
 
 
 def _source() -> dict[str, object]:
@@ -67,7 +82,7 @@ def _source() -> dict[str, object]:
             "complete_after": "2026-06-30",
             "source_manifest_sha256": "b" * 64,
             "dedupe_profile": "test-profile",
-            "cycle_policy_sha256": "c" * 64,
+            "cycle_policy_sha256": canonical_sha256(CYCLE_POLICY),
             "cycle_counts": {"6th": 1, "7th": 1},
             "jurisdiction_count": 2,
             "selected_row_count": 2,
@@ -148,7 +163,12 @@ def _schema(
         "field_count": len(field_map),
         "managed_field_ids": sorted(field_map.values()),
         "fields": [
-            {"id": field_id, "name": logical, "type": types[logical]}
+            {
+                "id": field_id,
+                "name": logical,
+                "type": types[logical],
+                "options": None,
+            }
             for logical, field_id in field_map.items()
         ],
     }
@@ -302,6 +322,7 @@ def test_plan_is_cycle_aware_digest_bound_and_converts_to_updates() -> None:
         totals=_source(),
         snapshot=_snapshot(),
         config=local_config,
+        cycle_policy=CYCLE_POLICY,
         git_sha="a" * 40,
     )
     assert plan["apply_eligible"] is True
@@ -340,6 +361,7 @@ def test_not_current_target_blocks_apply() -> None:
         totals=_source(),
         snapshot=snapshot,
         config=local_config,
+        cycle_policy=CYCLE_POLICY,
         git_sha="a" * 40,
     )
     assert plan["apply_eligible"] is False
@@ -358,6 +380,88 @@ def test_source_digest_is_exact() -> None:
         totals=source,
         snapshot=_snapshot(),
         config=local_config,
+        cycle_policy=CYCLE_POLICY,
         git_sha="a" * 40,
     )
     assert plan["source_sha256"] == canonical_sha256(source)
+
+
+def test_blank_permit_cell_is_planned_as_an_explicit_zero() -> None:
+    local_config = copy.deepcopy(CONFIG)
+    local_config["expected_jurisdiction_record_count"] = 3
+    snapshot = _snapshot()
+    snapshot["rhna_records"][0]["permit_values"]["mi"] = None
+
+    plan = build_airtable_sync_plan(
+        totals=_source(),
+        snapshot=snapshot,
+        config=local_config,
+        cycle_policy=CYCLE_POLICY,
+        git_sha="a" * 40,
+    )
+
+    change = next(
+        item
+        for item in plan["changes"]
+        if item["airtable_record_id"] == "recExampleRhna0001"
+    )
+    mi_field = CONFIG["rhna_fields"]["mi"]
+    assert change["expected_fields"][mi_field] is None
+    assert change["desired_fields"][mi_field] == 0
+
+
+def test_current_cycle_policy_digest_is_required() -> None:
+    local_config = copy.deepcopy(CONFIG)
+    local_config["expected_jurisdiction_record_count"] = 3
+
+    with pytest.raises(
+        AirtableSyncConfigurationError,
+        match="not built from the current cycle policy",
+    ):
+        build_airtable_sync_plan(
+            totals=_source(),
+            snapshot=_snapshot(),
+            config=local_config,
+            cycle_policy={**CYCLE_POLICY, "policy_version": 2},
+            git_sha="a" * 40,
+        )
+
+
+@pytest.mark.parametrize("logical_name", ["current", "cycle"])
+def test_project_snapshot_rejects_formula_and_lookup_option_drift(
+    logical_name: str,
+) -> None:
+    jf = CONFIG["jurisdiction_fields"]
+    rf = CONFIG["rhna_fields"]
+    rhna_types = {
+        "jurisdiction_link": "multipleRecordLinks",
+        "cycle_link": "multipleRecordLinks",
+        "cycle": "multipleLookupValues",
+        "current": "formula",
+        "correct_link": "formula",
+        "vli": "number",
+        "li": "number",
+        "mi": "number",
+        "ami": "number",
+        "rhna_start": "multipleLookupValues",
+        "rhna_end": "multipleLookupValues",
+        "total_progress_override": "number",
+    }
+    rhna_schema = _schema(CONFIG["rhna_table_id"], rf, rhna_types)
+    field = next(
+        item for item in rhna_schema["fields"] if item["id"] == rf[logical_name]
+    )
+    field["options"] = {"unexpected": True}
+
+    with pytest.raises(AirtableSyncSnapshotError, match="pinned options"):
+        project_airtable_snapshot(
+            config={**CONFIG, "expected_jurisdiction_record_count": 3},
+            jurisdiction_schema=_schema(
+                CONFIG["jurisdictions_table_id"],
+                jf,
+                {"name": "singleLineText", "unincorporated": "checkbox"},
+            ),
+            rhna_schema=rhna_schema,
+            jurisdiction_export={},
+            rhna_export={},
+        )

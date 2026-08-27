@@ -2,7 +2,7 @@
 
 ## Normal refresh
 
-The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the detailed decision ledgers remain on the temporary runner only and are not uploaded as artifacts.
+The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with both audit summaries, for 90 days. A refresh pull request links the workflow run that contains them.
 
 The uploaded CSV is preferred. If that endpoint is unavailable, the workflow may use the official DataStore dump. The fallback is accepted only when its synthetic `_id` field is the sole extra column, its remaining ordered fields match the pinned source header, and its logical record count matches the DataStore total.
 
@@ -28,6 +28,7 @@ Before merging a refresh:
 6. Confirm that the selected cutoff year is intentional.
 7. Confirm that the selected year is no longer provisional before presenting it as complete. HCD states that the previous calendar year is not complete until June 30.
 8. Review the current-cycle split and any change to `config/airtable_cycles.json` separately from permit changes.
+9. Download the deduplication review artifact from the linked workflow run. Confirm that each removal includes its rule evidence, direct match, final retained reference, and matching retained report year.
 
 ## Webflow boundary
 
@@ -61,4 +62,4 @@ The job never creates, deletes, upserts, relinks, or changes schema. A blocker o
 
 ## Recovery
 
-Every source file is named by its content digest. A failed build leaves the prior committed output unchanged. Use the workflow logs and the official source configuration to reproduce the error locally. GitHub Actions deliberately does not retain raw snapshots or the detailed decision ledger. Do not replace a prior source snapshot with a file that has different bytes under the same name.
+Every source file is named by its content digest. A failed build leaves the prior committed output unchanged. Use the workflow logs and the official source configuration to reproduce the error locally. GitHub Actions deliberately does not retain raw snapshots or the complete decision ledgers. It retains only the smaller review evidence described above. Do not replace a prior source snapshot with a file that has different bytes under the same name.

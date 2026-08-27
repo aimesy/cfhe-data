@@ -28,8 +28,9 @@ HCD APR Table A2 + official planning periods
 - `data/processed/airtable_totals.json`, the cycle-aware input for Airtable, with 522 sixth-cycle and 17 seventh-cycle jurisdictions
 - `data/processed/source_manifest.json`, with source URLs, resource identifiers, hashes, byte counts, catalog metadata, and DataStore checks
 - `data/processed/audit_summary.json`, with selection totals, removal rules, and conservation checks
-- `data/processed/airtable_audit_summary.json`, with the same checks applied to the mixed current-cycle scope
+- `data/processed/airtable_audit_summary.json`, with the same checks and removal-rule breakdown applied to the mixed current-cycle scope
 - `data/run/dedupe_decisions.jsonl`, a complete local decision ledger excluded from Git and GitHub Actions artifacts
+- `data/run/dedupe_review.jsonl` and `data/run/airtable_dedupe_review.jsonl`, compact review ledgers containing every removal plus its directly matched and final referenced rows; these are attached to refresh workflow runs but never committed
 
 The CSV uses the requested labels `Undated Permits` and `Last Updated`. County names use `(Unincorporated)`.
 
@@ -60,8 +61,9 @@ The `Refresh HCD data` workflow runs weekly and may be started manually. Unless 
 3. checks the exact ordered CSV headers and the DataStore record totals;
 4. applies the audited deduplication profile;
 5. runs the test suite;
-6. keeps raw source records and the detailed decision ledger out of downloadable artifacts; and
-7. opens a draft pull request when the derived data changed.
+6. keeps raw source records and the complete decision ledgers out of downloadable artifacts;
+7. attaches smaller review ledgers with each removal and the rows needed to inspect its direct and final references; and
+8. opens a draft pull request that links that evidence when the derived data changed.
 
 It never merges a pull request or writes to Airtable or Webflow. Airtable publication is a separate protected job that runs only after reviewed data reaches `master`.
 
