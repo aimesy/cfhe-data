@@ -270,6 +270,10 @@ def test_update_checks_schema_prevalues_and_readback() -> None:
         "GET",
     ]
     patch = json.loads(transport.calls[2]["body"])
+    patch_query = urllib.parse.parse_qs(
+        urllib.parse.urlparse(transport.calls[2]["url"]).query
+    )
+    assert patch_query == {"returnFieldsByFieldId": ["true"]}
     assert patch == {
         "typecast": False,
         "records": [
