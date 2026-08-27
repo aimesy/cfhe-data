@@ -293,6 +293,12 @@ def _links(value: object, label: str) -> list[str]:
 
 
 def _lookup_values(value: object, label: str) -> list[object]:
+    # Airtable's public REST API returns lookup cells as flat arrays. The
+    # connector used for interactive audits preserves the linked-record
+    # relationship in a wrapper. Accept both documented surfaces while
+    # keeping the wrapper reconciliation checks strict.
+    if isinstance(value, list):
+        return list(value)
     if not isinstance(value, Mapping):
         raise AirtableSyncSnapshotError(f"{label} is not an Airtable lookup value")
     linked = value.get("linkedRecordIds")
@@ -314,10 +320,18 @@ def _lookup_values(value: object, label: str) -> list[object]:
 
 def _cycle(value: object, label: str) -> str:
     values = _lookup_values(value, label)
-    if len(values) != 1 or not isinstance(values[0], Mapping):
+    if len(values) != 1:
         raise AirtableSyncSnapshotError(f"{label} must resolve to one select value")
-    name = values[0].get("name")
-    if name not in {"6th", "7th"}:
+    selected = values[0]
+    if isinstance(selected, Mapping):
+        name = selected.get("name")
+    elif isinstance(selected, str):
+        name = selected
+    else:
+        raise AirtableSyncSnapshotError(f"{label} must resolve to one select value")
+    # Fifth-cycle rows remain in the historical table. They are never selected
+    # as publication targets, but the complete snapshot must still parse them.
+    if name not in {"5th", "6th", "7th"}:
         raise AirtableSyncSnapshotError(f"{label} has an unsupported cycle")
     return str(name)
 

@@ -245,6 +245,38 @@ def test_project_snapshot_decodes_lookup_wrappers_and_omitted_values() -> None:
     assert row["total_progress_override"] is None
     assert snapshot["retrieved_at"] == "2026-08-26T12:00:00Z"
 
+    rest_export = copy.deepcopy(rhna_export)
+    rest_fields = rest_export["records"][0]["fields"]
+    rest_fields[rf["cycle"]] = ["6th"]
+    rest_fields[rf["rhna_start"]] = ["2023-01-01"]
+    rest_fields[rf["rhna_end"]] = ["2031-12-31"]
+    rest_snapshot = project_airtable_snapshot(
+        config=local_config,
+        jurisdiction_schema=_schema(
+            CONFIG["jurisdictions_table_id"], jf, jurisdiction_types
+        ),
+        rhna_schema=_schema(CONFIG["rhna_table_id"], rf, rhna_types),
+        jurisdiction_export=jurisdiction_export,
+        rhna_export=rest_export,
+    )
+    rest_row = rest_snapshot["rhna_records"][0]
+    assert rest_row["cycle"] == "6th"
+    assert rest_row["rhna_start"] == "2023-01-01"
+    assert rest_row["rhna_end"] == "2031-12-31"
+
+    rest_fields[rf["cycle_link"]] = ["recCycleFifth00001"]
+    rest_fields[rf["cycle"]] = ["5th"]
+    historical_snapshot = project_airtable_snapshot(
+        config=local_config,
+        jurisdiction_schema=_schema(
+            CONFIG["jurisdictions_table_id"], jf, jurisdiction_types
+        ),
+        rhna_schema=_schema(CONFIG["rhna_table_id"], rf, rhna_types),
+        jurisdiction_export=jurisdiction_export,
+        rhna_export=rest_export,
+    )
+    assert historical_snapshot["rhna_records"][0]["cycle"] == "5th"
+
 
 def test_project_snapshot_rejects_schema_type_drift() -> None:
     jf = CONFIG["jurisdiction_fields"]
