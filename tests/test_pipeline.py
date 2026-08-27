@@ -5,9 +5,14 @@ import hashlib
 import json
 from pathlib import Path
 
-from cfhe_data.pipeline import build_artifacts
+import pytest
+
+from cfhe_data.pipeline import build_airtable_artifacts, build_artifacts
 
 OUTPUT_SCHEMA = Path(__file__).resolve().parents[1] / "schemas/jurisdiction_totals.json"
+AIRTABLE_OUTPUT_SCHEMA = (
+    Path(__file__).resolve().parents[1] / "schemas/airtable_totals.json"
+)
 
 
 TABLE_FIELDS = (
@@ -301,3 +306,157 @@ def test_pipeline_rejects_source_bytes_that_do_not_match_manifest(
         assert "SHA-256" in str(error)
     else:
         raise AssertionError("Expected source manifest verification to fail")
+
+
+def test_airtable_artifact_uses_declared_cycle_per_jurisdiction(
+    tmp_path: Path,
+) -> None:
+    table = tmp_path / "table.csv"
+    rhna = tmp_path / "rhna.csv"
+    write_csv(
+        table,
+        TABLE_FIELDS,
+        [
+            permit_row(
+                JURS_TRACKING_ID="EX-2023",
+                YEAR="2023",
+                BP_ISSUE_DT1="03/01/2023",
+            ),
+            permit_row(
+                JURS_TRACKING_ID="EX-2025",
+                YEAR="2025",
+                BP_ISSUE_DT1="03/01/2025",
+            ),
+            permit_row(
+                JURIS_NAME="Second City",
+                JURS_TRACKING_ID="SECOND-2023",
+                YEAR="2023",
+                BP_ISSUE_DT1="04/01/2023",
+            ),
+            permit_row(
+                JURIS_NAME="Second City",
+                JURS_TRACKING_ID="SECOND-2025",
+                YEAR="2025",
+                BP_ISSUE_DT1="04/01/2025",
+                NO_BUILDING_PERMITS="3",
+                BP_LOW_INCOME_DR="3",
+            ),
+        ],
+    )
+    rhna_fields = (
+        "Jurisdiction",
+        "Planning Period",
+        "6th Cycle Started",
+        "VLI UNITS",
+        "RHNA VLI",
+        "LI UNITS",
+        "RHNA LI",
+        "MOD UNITS",
+        "RHNA MOD",
+        "ABOVE MOD UNITS",
+        "RHNA ABOVE MOD",
+    )
+    blank_counts = {field: "0" for field in rhna_fields[3:]}
+    write_csv(
+        rhna,
+        rhna_fields,
+        [
+            {
+                "Jurisdiction": "Example City",
+                "Planning Period": "01/01/2023 - 12/31/2031",
+                "6th Cycle Started": "TRUE",
+                **blank_counts,
+            },
+            {
+                "Jurisdiction": "Second City",
+                "Planning Period": "01/01/2023 - 12/31/2031",
+                "6th Cycle Started": "TRUE",
+                **blank_counts,
+            },
+        ],
+    )
+    table_contract = tmp_path / "table-contract.json"
+    rhna_contract = tmp_path / "rhna-contract.json"
+    table_contract.write_text(
+        json.dumps({"required_columns": list(TABLE_FIELDS)}), encoding="utf-8"
+    )
+    rhna_contract.write_text(
+        json.dumps({"required_columns": list(rhna_fields)}), encoding="utf-8"
+    )
+    policy = tmp_path / "cycles.json"
+    policy.write_text(
+        json.dumps(
+            {
+                "policy_version": 1,
+                "default_cycle": "6th",
+                "expected_jurisdiction_count": 2,
+                "expected_cycle_counts": {"6th": 1, "7th": 1},
+                "overrides": [
+                    {
+                        "jurisdiction_key": "SECOND CITY",
+                        "cycle": "7th",
+                        "start": "2024-06-30",
+                        "end": "2029-06-30",
+                    }
+                ],
+                "source": "https://www.hcd.ca.gov/rhna/seventh-cycle",
+            }
+        ),
+        encoding="utf-8",
+    )
+    table_bytes = table.read_bytes()
+    rhna_bytes = rhna.read_bytes()
+    manifest = {
+        "manifest_version": 1,
+        "sources": {
+            "table_a2": {
+                "bytes": len(table_bytes),
+                "sha256": hashlib.sha256(table_bytes).hexdigest(),
+                "last_modified": "Fri, 14 Aug 2026 00:00:00 GMT",
+                "retrieved_at": "2026-08-20T00:00:00+00:00",
+            },
+            "rhna_progress_6": {
+                "bytes": len(rhna_bytes),
+                "sha256": hashlib.sha256(rhna_bytes).hexdigest(),
+            },
+        },
+    }
+
+    artifacts = build_airtable_artifacts(
+        table_a2_path=table,
+        rhna_path=rhna,
+        table_contract_path=table_contract,
+        rhna_contract_path=rhna_contract,
+        output_schema_path=AIRTABLE_OUTPUT_SCHEMA,
+        cycle_policy_path=policy,
+        source_manifest=manifest,
+        cutoff_year=2025,
+        output_dir=tmp_path / "out",
+        audit_dir=tmp_path / "audit",
+    )
+
+    payload = json.loads(artifacts.jurisdiction_json.read_text(encoding="utf-8"))
+    rows = {row["jurisdiction_key"]: row for row in payload["jurisdictions"]}
+    assert payload["metadata"]["cycle_counts"] == {"6th": 1, "7th": 1}
+    assert rows["EXAMPLE CITY"]["cycle"] == "6th"
+    assert rows["EXAMPLE CITY"]["total"] == 2
+    assert rows["SECOND CITY"]["cycle"] == "7th"
+    assert rows["SECOND CITY"]["period_start"] == "2024-06-30"
+    assert rows["SECOND CITY"]["total"] == 3
+
+    bad_policy = json.loads(policy.read_text(encoding="utf-8"))
+    bad_policy["overrides"].append(dict(bad_policy["overrides"][0]))
+    policy.write_text(json.dumps(bad_policy), encoding="utf-8")
+    with pytest.raises(ValueError, match="Duplicate Airtable cycle override"):
+        build_airtable_artifacts(
+            table_a2_path=table,
+            rhna_path=rhna,
+            table_contract_path=table_contract,
+            rhna_contract_path=rhna_contract,
+            output_schema_path=AIRTABLE_OUTPUT_SCHEMA,
+            cycle_policy_path=policy,
+            source_manifest=manifest,
+            cutoff_year=2025,
+            output_dir=tmp_path / "out",
+            audit_dir=tmp_path / "audit",
+        )

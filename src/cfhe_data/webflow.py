@@ -129,7 +129,7 @@ def _date_string(value: object, label: str) -> str:
     return value
 
 
-def _validate_totals(
+def validate_jurisdiction_totals(
     totals: Mapping[str, object],
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
     metadata_raw = totals.get("metadata")
@@ -457,6 +457,8 @@ def _source_value(
 ) -> object:
     in_row = source_field in row and source_field != "jurisdiction"
     in_metadata = source_field in metadata
+    if source_field in JURISDICTION_FIELDS and in_row:
+        return row[source_field]
     if in_row and in_metadata and row[source_field] != metadata[source_field]:
         raise MappingConfigurationError(
             f"Configured source field {source_field!r} is ambiguous between a "
@@ -496,7 +498,7 @@ def build_change_plan(
         raise InvalidTotalsError("jurisdiction_totals must be an object")
     if not isinstance(mapping_config, Mapping):
         raise MappingConfigurationError("mapping_config must be an object")
-    metadata, jurisdictions = _validate_totals(jurisdiction_totals)
+    metadata, jurisdictions = validate_jurisdiction_totals(jurisdiction_totals)
     jurisdiction_names = {str(row["jurisdiction"]) for row in jurisdictions}
     config = _normalize_mapping_config(mapping_config, jurisdiction_names)
 

@@ -1,9 +1,9 @@
 # cfhe-data
 
-Private, reproducible HCD APR data pipeline for the California Fair Housing Elements tracker.
+Reproducible HCD APR data pipeline for the California Fair Housing Elements tracker.
 
 ```text
-HCD APR Table A2 + sixth cycle planning periods
+HCD APR Table A2 + official planning periods
                       |
                       v
         source and schema validation
@@ -12,21 +12,23 @@ HCD APR Table A2 + sixth cycle planning periods
           audited snapshot deduplication
                       |
                       v
-        jurisdiction CSV and JSON totals
+      sixth-cycle and current-cycle totals
                       |
                       v
               reviewed GitHub PR
                       |
                       v
-        Webflow change plan, then approval
+       protected GitHub-to-Airtable update
 ```
 
 ## What it produces
 
 - `data/processed/jurisdiction_totals.csv`, with one row per sixth cycle jurisdiction
 - `data/processed/jurisdiction_totals.json`, the canonical input for a future Webflow update
+- `data/processed/airtable_totals.json`, the cycle-aware input for Airtable, with 522 sixth-cycle and 17 seventh-cycle jurisdictions
 - `data/processed/source_manifest.json`, with source URLs, resource identifiers, hashes, byte counts, catalog metadata, and DataStore checks
 - `data/processed/audit_summary.json`, with selection totals, removal rules, and conservation checks
+- `data/processed/airtable_audit_summary.json`, with the same checks applied to the mixed current-cycle scope
 - `data/run/dedupe_decisions.jsonl`, a complete local decision ledger excluded from Git and GitHub Actions artifacts
 
 The CSV uses the requested labels `Undated Permits` and `Last Updated`. County names use `(Unincorporated)`.
@@ -51,7 +53,7 @@ cfhe-data build `
 
 ## Refresh policy
 
-The `Refresh HCD data` workflow runs weekly and may be started manually. It:
+The `Refresh HCD data` workflow runs weekly and may be started manually. Unless a manual cutoff is supplied, it selects the most recent reporting year that has passed HCD's June 30 completeness date. It:
 
 1. verifies the pinned CKAN package and resource identities;
 2. downloads the complete source files and checks the catalog MD5 for uploaded CSV bytes;
@@ -61,7 +63,7 @@ The `Refresh HCD data` workflow runs weekly and may be started manually. It:
 6. keeps raw source records and the detailed decision ledger out of downloadable artifacts; and
 7. opens a draft pull request when the derived data changed.
 
-It never merges a pull request or writes to Webflow.
+It never merges a pull request or writes to Airtable or Webflow. Airtable publication is a separate protected job that runs only after reviewed data reaches `master`.
 
 ## Deduplication boundary
 
@@ -76,6 +78,16 @@ See [methodology](docs/methodology.md), [provenance](docs/provenance.md), and [o
 `cfhe-data webflow-plan` can compare a reviewed totals file with a complete caller supplied CMS snapshot. It produces a digest bound plan containing only changed fields and their before and after values. It makes no network call and has no apply function.
 
 An eventual Webflow apply workflow requires a protected GitHub Environment, a Webflow API token, site and collection identifiers, exact CMS field slugs, and a jurisdiction item mapping. Start from `config/webflow.example.json` after those values are available.
+
+## Airtable publication
+
+`cfhe-data airtable-sync` is the production GitHub-to-Airtable path. It fetches the complete base and schema, maps every source jurisdiction through its canonical key and the Airtable unincorporated flag, selects the declared sixth or seventh cycle row, and plans changes to only VLI, LI, MI, and AMI permit fields.
+
+Without `--apply`, the command is read only. With `--apply`, it will proceed only when the source is complete, all 539 targets are unique and current, the schema still matches the pinned field IDs and types, and no Airtable progress override supersedes the permit fields. It rechecks values before each batch of ten, uses conditional updates, and verifies every record after writing. It never creates, deletes, upserts, relinks, or changes Airtable schema.
+
+The GitHub job runs only on a push to `master`, after CI, through the protected `airtable-production` environment. The PAT is limited to this base and is stored only as the `AIRTABLE_TOKEN` environment secret. See the [Airtable operations guide](docs/airtable.md).
+
+The older `airtable-plan` command remains available for offline comparisons from supplied snapshots. Local snapshots and plans belong under ignored `data/airtable/` because they contain Airtable record IDs.
 
 ## Official sources
 

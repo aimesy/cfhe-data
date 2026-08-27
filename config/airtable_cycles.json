@@ -1,0 +1,29 @@
+{
+  "policy_version": 1,
+  "default_cycle": "6th",
+  "expected_jurisdiction_count": 539,
+  "expected_cycle_counts": {
+    "6th": 522,
+    "7th": 17
+  },
+  "overrides": [
+    {"jurisdiction_key": "ALPINE COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "ALTURAS", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "CORNING", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "LASSEN COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "LOYALTON", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "MARIPOSA COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "MODOC COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "PLUMAS COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "PORTOLA", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "RED BLUFF", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "SIERRA COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "SONORA", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "SUSANVILLE", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "TEHAMA", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "TEHAMA COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "TRINITY COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"},
+    {"jurisdiction_key": "TUOLUMNE COUNTY", "cycle": "7th", "start": "2024-06-30", "end": "2029-06-30"}
+  ],
+  "source": "https://www.hcd.ca.gov/rhna/seventh-cycle"
+}

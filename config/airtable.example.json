@@ -1,0 +1,13 @@
+{
+  "base_id": "replace-with-airtable-base-id",
+  "jurisdictions_table_id": "replace-with-jurisdictions-table-id",
+  "rhna_table_id": "replace-with-rhna-table-id",
+  "comparison_cycle": "6th",
+  "excluded_jurisdictions": [
+    "Sitekick City"
+  ],
+  "jurisdiction_mappings": {
+    "Example County (Unincorporated)": "Example County (Unincorporated Areas)",
+    "McFarland": "Mcfarland"
+  }
+}

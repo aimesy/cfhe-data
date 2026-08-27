@@ -2,11 +2,11 @@
 
 ## Normal refresh
 
-The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds the jurisdiction totals, and runs the tests. Raw source records and the detailed decision ledger remain on the temporary runner only and are not uploaded as artifacts.
+The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the detailed decision ledgers remain on the temporary runner only and are not uploaded as artifacts.
 
 The uploaded CSV is preferred. If that endpoint is unavailable, the workflow may use the official DataStore dump. The fallback is accepted only when its synthetic `_id` field is the sole extra column, its remaining ordered fields match the pinned source header, and its logical record count matches the DataStore total.
 
-If the source digest and derived output have not changed, the run creates no commit. If they have changed, the workflow opens a draft pull request. A person reviews and merges that pull request. Nothing in this repository publishes to Webflow automatically.
+If the source digest and derived output have not changed, the run creates no commit. If they have changed, the workflow opens a draft pull request. A person reviews and merges that pull request. A merge to `master` starts the protected Airtable publication job. Nothing publishes to Webflow automatically.
 
 Local equivalent:
 
@@ -26,7 +26,8 @@ Before merging a refresh:
 4. Review removals by rule and any unresolved candidates.
 5. Compare jurisdiction changes, especially unusually large changes.
 6. Confirm that the selected cutoff year is intentional.
-7. Confirm that the current year is no longer provisional before presenting it as complete. HCD states that the previous calendar year is not complete until June 30.
+7. Confirm that the selected year is no longer provisional before presenting it as complete. HCD states that the previous calendar year is not complete until June 30.
+8. Review the current-cycle split and any change to `config/airtable_cycles.json` separately from permit changes.
 
 ## Webflow boundary
 
@@ -45,6 +46,18 @@ The repository does not yet contain an apply workflow. Building that step requir
 - an approval rule for the protected environment.
 
 The first Webflow implementation should create a change plan and compare current CMS values before any write. An apply run should require the exact source digest, Git commit, and plan digest, and should update mapped items only. It should not create, delete, or publish CMS items automatically.
+
+## Airtable publication boundary
+
+GitHub owns the HCD calculation and review. Airtable remains the operational source for the tracker and its nonpermit fields. The publication job updates only the four permit bands on existing RHNA records.
+
+The mixed-cycle artifact declares the target cycle and HCD counting period for each jurisdiction. Airtable cycle dates are audit context only and are not used as HCD counting windows. Canonical jurisdiction keys plus Airtable's unincorporated checkbox provide the exact mapping. Display spelling is not used as a fuzzy key.
+
+The `airtable-production` GitHub Environment holds one secret, `AIRTABLE_TOKEN`. The token is restricted to the CFHE base and has only `data.records:read`, `data.records:write`, and `schema.bases:read`. No token belongs in the repository, an Actions log, or a saved plan.
+
+The publication job checks the exact Git commit, full schema, terminal pagination, unique jurisdiction coverage, cycle selection, current formula, Correct Link formula, progress overrides, source and snapshot digests, and field prevalues. Updates are sent in batches of no more than ten. Every batch is read immediately before and after the write. A safe rerun recognizes values already written by an interrupted prior run.
+
+The job never creates, deletes, upserts, relinks, or changes schema. A blocker or mismatch fails the job before the affected batch is sent.
 
 ## Recovery
 
