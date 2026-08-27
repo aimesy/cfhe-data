@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 
-import cfhe_data.cli as cli
+from cfhe_data import cli
 from cfhe_data.cli import build_parser
 
 
