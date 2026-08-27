@@ -1,9 +1,9 @@
 """Narrow, defensive Airtable Web API access for the publication pipeline.
 
 The client deliberately exposes reads and updates only. Every update is bound to
-an exact record ID, exact field IDs, and caller supplied expected values. It
-checks fresh state before each batch and verifies state again after Airtable
-acknowledges the write.
+an exact record ID, an explicit write allowlist, and caller supplied expected
+values. It checks fresh state immediately before each batch and verifies state
+again after Airtable acknowledges the write.
 """
 
 from __future__ import annotations
@@ -270,7 +270,7 @@ def _utc_now() -> dt.datetime:
 
 
 class AirtableClient:
-    """Read and conditionally update one exact Airtable table."""
+    """Read one exact table and update only explicitly writable fields."""
 
     def __init__(
         self,
@@ -279,6 +279,7 @@ class AirtableClient:
         base_id: str,
         table_id: str,
         managed_field_ids: Sequence[str],
+        writable_field_ids: Sequence[str] = (),
         transport: HttpTransport | None = None,
         timeout_seconds: float = 30.0,
         max_retries: int = 4,
@@ -312,6 +313,24 @@ class AirtableClient:
         self.managed_field_ids = tuple(sorted(fields))
         self._managed_field_set = frozenset(fields)
 
+        if isinstance(writable_field_ids, (str, bytes)):
+            raise AirtableConfigurationError(
+                "writable_field_ids must be a sequence of Airtable field IDs"
+            )
+        writable_fields = tuple(
+            _validate_id(field_id, _FIELD_ID_RE, "writable field ID")
+            for field_id in writable_field_ids
+        )
+        if len(set(writable_fields)) != len(writable_fields):
+            raise AirtableConfigurationError("writable_field_ids contains duplicates")
+        outside_managed = sorted(set(writable_fields) - self._managed_field_set)
+        if outside_managed:
+            raise AirtableConfigurationError(
+                "writable_field_ids must be a subset of managed_field_ids"
+            )
+        self.writable_field_ids = tuple(sorted(writable_fields))
+        self._writable_field_set = frozenset(writable_fields)
+
         if not isinstance(timeout_seconds, (int, float)) or timeout_seconds <= 0:
             raise AirtableConfigurationError("timeout_seconds must be positive")
         if isinstance(max_retries, bool) or not isinstance(max_retries, int):
@@ -335,7 +354,9 @@ class AirtableClient:
     def __repr__(self) -> str:
         return (
             f"AirtableClient(base_id={self.base_id!r}, "
-            f"table_id={self.table_id!r}, token=<redacted>)"
+            f"table_id={self.table_id!r}, "
+            f"writable_field_ids={list(self.writable_field_ids)!r}, "
+            "token=<redacted>)"
         )
 
     def get_table_schema(self) -> dict[str, Any]:
@@ -362,7 +383,7 @@ class AirtableClient:
         if not isinstance(fields, list):
             raise AirtableProtocolError("Airtable table schema has no fields array")
 
-        projected: list[dict[str, str]] = []
+        projected: list[dict[str, Any]] = []
         seen: set[str] = set()
         for position, raw_field in enumerate(fields):
             if not isinstance(raw_field, Mapping):
@@ -385,7 +406,16 @@ class AirtableClient:
                     f"Airtable schema field {field_id} lacks name or type"
                 )
             seen.add(field_id)
-            projected.append({"id": field_id, "name": name, "type": field_type})
+            projected.append(
+                {
+                    "id": field_id,
+                    "name": name,
+                    "type": field_type,
+                    "options": _copy_json_value(
+                        raw_field.get("options"), f"schema.{field_id}.options"
+                    ),
+                }
+            )
 
         missing = sorted(self._managed_field_set - seen)
         if missing:
@@ -404,6 +434,7 @@ class AirtableClient:
             "table_name": table_name,
             "field_count": len(projected),
             "managed_field_ids": list(self.managed_field_ids),
+            "writable_field_ids": list(self.writable_field_ids),
             "fields": projected,
         }
 
@@ -501,39 +532,19 @@ class AirtableClient:
         completed_batches = 0
         for start in range(0, len(normalized), batch_size):
             batch = normalized[start : start + batch_size]
-            already_current: list[_NormalizedUpdate] = []
-            pending: list[_NormalizedUpdate] = []
-            conflicts: dict[str, list[str]] = {}
-
-            for update in batch:
-                record = self._read_record(update.record_id)
-                fields = record["fields"]
-                desired_matches = {
-                    field_id: _json_equal(fields.get(field_id), desired)
-                    for field_id, desired in update.desired_fields.items()
-                }
-                expected_matches = {
-                    field_id: _json_equal(
-                        fields.get(field_id), update.expected_fields[field_id]
-                    )
-                    for field_id in update.expected_fields
-                }
-                if all(desired_matches.values()):
-                    already_current.append(update)
-                elif all(expected_matches.values()):
-                    pending.append(update)
-                else:
-                    conflicts[update.record_id] = sorted(
-                        field_id
-                        for field_id in update.expected_fields
-                        if not expected_matches[field_id]
-                        and not desired_matches[field_id]
-                    )
-                    if not conflicts[update.record_id]:
-                        conflicts[update.record_id] = sorted(update.expected_fields)
-
+            already_current, pending, conflicts = self._classify_updates(batch)
             if conflicts:
                 raise AirtablePreconditionError(conflicts)
+
+            # Re-read records that appeared eligible immediately before PATCH.
+            # Airtable has no server-side compare-and-swap operation, so this
+            # second pass narrows the window in which an interactive edit could
+            # be overwritten. The final readback remains authoritative.
+            if pending:
+                newly_current, pending, conflicts = self._classify_updates(pending)
+                if conflicts:
+                    raise AirtablePreconditionError(conflicts)
+                already_current.extend(newly_current)
 
             statuses.extend(
                 self._record_status(update, "already_current")
@@ -550,6 +561,43 @@ class AirtableClient:
         order = {update.record_id: index for index, update in enumerate(normalized)}
         statuses.sort(key=lambda item: order[str(item["record_id"])])
         return self._result(statuses, batch_count=completed_batches)
+
+    def _classify_updates(
+        self, updates: Sequence[_NormalizedUpdate]
+    ) -> tuple[
+        list[_NormalizedUpdate],
+        list[_NormalizedUpdate],
+        dict[str, list[str]],
+    ]:
+        already_current: list[_NormalizedUpdate] = []
+        pending: list[_NormalizedUpdate] = []
+        conflicts: dict[str, list[str]] = {}
+        for update in updates:
+            record = self._read_record(update.record_id)
+            fields = record["fields"]
+            desired_matches = {
+                field_id: _json_equal(fields.get(field_id), desired)
+                for field_id, desired in update.desired_fields.items()
+            }
+            expected_matches = {
+                field_id: _json_equal(
+                    fields.get(field_id), update.expected_fields[field_id]
+                )
+                for field_id in update.expected_fields
+            }
+            if all(desired_matches.values()):
+                already_current.append(update)
+            elif all(expected_matches.values()):
+                pending.append(update)
+            else:
+                conflicts[update.record_id] = sorted(
+                    field_id
+                    for field_id in update.expected_fields
+                    if not expected_matches[field_id] and not desired_matches[field_id]
+                )
+                if not conflicts[update.record_id]:
+                    conflicts[update.record_id] = sorted(update.expected_fields)
+        return already_current, pending, conflicts
 
     def _normalize_updates(
         self, updates: Sequence[RecordUpdate]
@@ -590,11 +638,11 @@ class AirtableClient:
                 for field_id in expected_keys
                 if not isinstance(field_id, str)
                 or not _FIELD_ID_RE.fullmatch(field_id)
-                or field_id not in self._managed_field_set
+                or field_id not in self._writable_field_set
             ]
             if invalid:
                 raise AirtableConfigurationError(
-                    f"updates[{position}] has unmanaged or invalid field IDs"
+                    f"updates[{position}] has unwritable or invalid field IDs"
                 )
             expected = {
                 field_id: _copy_json_value(

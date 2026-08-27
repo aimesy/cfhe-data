@@ -51,3 +51,9 @@ The release profile is `audited-apr-snapshots-v3`. It does not accept a house nu
 Compared with v1 on the same logical snapshot, v3 retained 476 additional rows and 787 additional units. The change restored 68 very low, 72 low, 187 moderate, and 460 above moderate units. Acutely low and extremely low totals did not change.
 
 The release build retained 278,260 of 311,150 selected rows and 502,700 of 563,435 selected units. It removed 32,890 earlier snapshot rows containing 60,735 units. The output contains 539 jurisdictions and 640 units from rows with no permit date.
+
+## Final retained lineage revision
+
+The August 27, 2026 lineage audit found that 808 removal entries named at least one directly matched row that a later rule also removed. Those entries contained 821 references to rows that did not survive the final rule pass. Separately, 23 reference values across 22 removal entries did not agree with the single retained report year recorded on the entry. Every affected chain was acyclic and terminated in a later retained row, so the defect concerned review lineage rather than deduplication counts.
+
+The revised ledger preserves the directly matched source indices and separately resolves the final retained source indices after every rule pass. The standard and mixed-cycle ledgers now contain zero final references to removed rows, zero missing final references, and zero final reference years that disagree with the declared retained report year. Each ledger contains 808 entries marked as transitive lineage. The change did not alter the standard total of 502,700 units or the mixed-cycle Airtable total of 501,601 units.

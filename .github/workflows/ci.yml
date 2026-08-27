@@ -61,9 +61,13 @@ jobs:
       - name: Publish reviewed permit totals to Airtable
         env:
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
-        run: >-
-          cfhe-data airtable-sync
-          --totals data/processed/airtable_totals.json
-          --config config/airtable_sync.json
-          --git-sha "$GITHUB_SHA"
-          --apply
+        shell: bash
+        run: |
+          git fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          test "$(git rev-parse origin/master)" = "$GITHUB_SHA"
+          cfhe-data airtable-sync \
+            --totals data/processed/airtable_totals.json \
+            --config config/airtable_sync.json \
+            --cycle-policy config/airtable_cycles.json \
+            --git-sha "$GITHUB_SHA" \
+            --apply

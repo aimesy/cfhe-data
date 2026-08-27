@@ -200,6 +200,30 @@ def test_pipeline_filters_deduplicates_and_marks_undated_rows(tmp_path: Path) ->
         )
         == 1
     )
+    review_ledger = artifacts.review_ledger.read_text(encoding="utf-8").splitlines()
+    assert len(review_ledger) == 2
+    review_rows = [json.loads(line) for line in review_ledger]
+    review_row = next(
+        row for row in review_rows if row["decision"] == "removed_earlier_snapshot"
+    )
+    retained_row = next(row for row in review_rows if row["decision"] == "retained")
+    assert review_row["decision"] == "removed_earlier_snapshot"
+    assert review_row["lineage_resolution"] == "direct"
+    assert review_row["matched_source_indices"] == review_row["retained_source_indices"]
+    assert review_row["retained_source_indices"] == [
+        retained_row["source_record_index"]
+    ]
+    assert (
+        not {
+            "raw_row",
+            "street_address",
+            "standard_address",
+            "apn",
+            "project_name",
+            "tracking_id",
+        }
+        & review_row.keys()
+    )
 
     first_bytes = {
         path.name: path.read_bytes()
@@ -208,6 +232,7 @@ def test_pipeline_filters_deduplicates_and_marks_undated_rows(tmp_path: Path) ->
             artifacts.jurisdiction_csv,
             artifacts.audit_summary,
             artifacts.decision_ledger,
+            artifacts.review_ledger,
         )
     }
     repeated = build_artifacts(
@@ -228,6 +253,7 @@ def test_pipeline_filters_deduplicates_and_marks_undated_rows(tmp_path: Path) ->
             repeated.jurisdiction_csv,
             repeated.audit_summary,
             repeated.decision_ledger,
+            repeated.review_ledger,
         )
     }
 
@@ -436,8 +462,11 @@ def test_airtable_artifact_uses_declared_cycle_per_jurisdiction(
     )
 
     payload = json.loads(artifacts.jurisdiction_json.read_text(encoding="utf-8"))
+    audit_payload = json.loads(artifacts.audit_summary.read_text(encoding="utf-8"))
     rows = {row["jurisdiction_key"]: row for row in payload["jurisdictions"]}
     assert payload["metadata"]["cycle_counts"] == {"6th": 1, "7th": 1}
+    assert audit_payload["removed_by_rule"] == {}
+    assert artifacts.review_ledger.read_text(encoding="utf-8") == ""
     assert rows["EXAMPLE CITY"]["cycle"] == "6th"
     assert rows["EXAMPLE CITY"]["total"] == 2
     assert rows["SECOND CITY"]["cycle"] == "7th"

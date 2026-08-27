@@ -32,7 +32,7 @@ For a dated row with a substantive jurisdiction tracking identifier:
 
 For a dated row with a blank or generic tracking identifier, the baseline rule requires every raw field except `YEAR` to match literally. It removes an earlier snapshot only when the latest snapshot has at least the same row multiplicity.
 
-The residual rules require each earlier row to match at least one retained row from the latest APR year using either an exact valid APN, exact valid coordinates, or at least two independent signals among substantive project metadata, street, and house number. A house number, street, or project name alone cannot remove a row. Populated but conflicting unit identifiers veto residual removal, including when APN or coordinates agree. The rules retain ambiguous cases, keep every latest APR row, and preserve every duplicate within one APR year. Every removal names the exact retained row and applicable evidence in the audit ledger.
+The residual rules require each earlier row to match at least one later snapshot using either an exact valid APN, exact valid coordinates, or at least two independent signals among substantive project metadata, street, and house number. A house number, street, or project name alone cannot remove a row. Populated but conflicting unit identifiers veto residual removal, including when APN or coordinates agree. The rules retain ambiguous cases, keep every latest APR row, and preserve every duplicate within one APR year. The audit ledger preserves the directly matched rows, resolves each chain to the rows retained after every rule pass, and records a retained report year that agrees with every final reference.
 
 The dashboard total is not a target for these rules. A difference from the dashboard is reported, not optimized away.
 
@@ -41,7 +41,8 @@ The dashboard total is not a target for these rules. A difference from the dashb
 A build stops on a missing required column, duplicate header, malformed row, negative or fractional permit count, malformed planning period, or invalid nonblank permit date. The audit also checks:
 
 - input selection equals retained rows plus removed rows;
-- every removed row has a later retained snapshot;
+- every removed row resolves through an acyclic chain to at least one later retained snapshot;
+- every final retained reference exists, remains in the output, and agrees with the declared retained report year;
 - the newest APR multiplicity is preserved;
 - aggregation happens only after deduplication;
 - category totals reconcile with the jurisdiction rows;

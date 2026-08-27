@@ -48,7 +48,9 @@ SYNC_CONFIG_FIELDS = {
     "expected_jurisdiction_record_count",
     "excluded_jurisdictions",
     "jurisdiction_fields",
+    "jurisdiction_field_options_sha256",
     "rhna_fields",
+    "rhna_field_options_sha256",
 }
 JURISDICTION_FIELD_NAMES = {"name", "unincorporated"}
 RHNA_FIELD_NAMES = {
@@ -147,6 +149,24 @@ def _field_mapping(
     return dict(sorted(result.items()))
 
 
+def _digest_mapping(
+    value: object, expected_names: set[str], label: str
+) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise AirtableSyncConfigurationError(f"{label} must be an object")
+    raw = dict(value)
+    _strict_keys(raw, expected_names, label)
+    result: dict[str, str] = {}
+    for name in expected_names:
+        digest = raw[name]
+        if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
+            raise AirtableSyncConfigurationError(
+                f"{label}.{name} must be a lowercase SHA-256 digest"
+            )
+        result[name] = digest
+    return dict(sorted(result.items()))
+
+
 def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
     """Validate and canonicalize the public, nonsecret Airtable mapping."""
 
@@ -181,8 +201,18 @@ def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
             JURISDICTION_FIELD_NAMES,
             "jurisdiction_fields",
         ),
+        "jurisdiction_field_options_sha256": _digest_mapping(
+            raw["jurisdiction_field_options_sha256"],
+            JURISDICTION_FIELD_NAMES,
+            "jurisdiction_field_options_sha256",
+        ),
         "rhna_fields": _field_mapping(
             raw["rhna_fields"], RHNA_FIELD_NAMES, "rhna_fields"
+        ),
+        "rhna_field_options_sha256": _digest_mapping(
+            raw["rhna_field_options_sha256"],
+            RHNA_FIELD_NAMES,
+            "rhna_field_options_sha256",
         ),
     }
     if not str(result["base_id"]).startswith("app"):
@@ -193,7 +223,9 @@ def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
     return result
 
 
-def _schema_types(schema: Mapping[str, object], table_id: str) -> dict[str, str]:
+def _schema_fields(
+    schema: Mapping[str, object], table_id: str
+) -> dict[str, dict[str, object]]:
     if schema.get("complete") is not True or schema.get("table_id") != table_id:
         raise AirtableSyncSnapshotError(
             "Airtable schema is incomplete or for another table"
@@ -201,7 +233,7 @@ def _schema_types(schema: Mapping[str, object], table_id: str) -> dict[str, str]
     fields = schema.get("fields")
     if not isinstance(fields, list):
         raise AirtableSyncSnapshotError("Airtable schema has no fields array")
-    result: dict[str, str] = {}
+    result: dict[str, dict[str, object]] = {}
     for item in fields:
         if not isinstance(item, Mapping):
             raise AirtableSyncSnapshotError(
@@ -213,7 +245,10 @@ def _schema_types(schema: Mapping[str, object], table_id: str) -> dict[str, str]
             raise AirtableSyncSnapshotError("Airtable schema field is incomplete")
         if field_id in result:
             raise AirtableSyncSnapshotError("Airtable schema repeats a field ID")
-        result[field_id] = field_type
+        result[field_id] = {
+            "type": field_type,
+            "options": item.get("options"),
+        }
     return result
 
 
@@ -223,12 +258,21 @@ def _verify_schema(
     table_id: str,
     field_ids: Mapping[str, str],
     expected_types: Mapping[str, str],
+    expected_options_sha256: Mapping[str, str],
 ) -> None:
-    actual = _schema_types(schema, table_id)
+    actual = _schema_fields(schema, table_id)
     for logical_name, field_id in field_ids.items():
-        if actual.get(field_id) != expected_types[logical_name]:
+        field = actual.get(field_id)
+        if field is None or field.get("type") != expected_types[logical_name]:
             raise AirtableSyncSnapshotError(
                 f"Airtable field {logical_name!r} no longer has the pinned type"
+            )
+        if (
+            canonical_sha256(field.get("options"))
+            != expected_options_sha256[logical_name]
+        ):
+            raise AirtableSyncSnapshotError(
+                f"Airtable field {logical_name!r} no longer has the pinned options"
             )
 
 
@@ -362,20 +406,26 @@ def project_airtable_snapshot(
     jurisdictions_table_id = str(normalized["jurisdictions_table_id"])
     rhna_table_id = str(normalized["rhna_table_id"])
     jurisdiction_fields = normalized["jurisdiction_fields"]
+    jurisdiction_field_options = normalized["jurisdiction_field_options_sha256"]
     rhna_fields = normalized["rhna_fields"]
+    rhna_field_options = normalized["rhna_field_options_sha256"]
     assert isinstance(jurisdiction_fields, Mapping)
+    assert isinstance(jurisdiction_field_options, Mapping)
     assert isinstance(rhna_fields, Mapping)
+    assert isinstance(rhna_field_options, Mapping)
     _verify_schema(
         jurisdiction_schema,
         table_id=jurisdictions_table_id,
         field_ids=jurisdiction_fields,
         expected_types=JURISDICTION_FIELD_TYPES,
+        expected_options_sha256=jurisdiction_field_options,
     )
     _verify_schema(
         rhna_schema,
         table_id=rhna_table_id,
         field_ids=rhna_fields,
         expected_types=RHNA_FIELD_TYPES,
+        expected_options_sha256=rhna_field_options,
     )
     jurisdiction_records = _complete_export(
         jurisdiction_export, base_id=base_id, table_id=jurisdictions_table_id
@@ -510,6 +560,7 @@ def fetch_airtable_snapshot(
         base_id=str(normalized["base_id"]),
         table_id=str(normalized["rhna_table_id"]),
         managed_field_ids=list(rhna_fields.values()),
+        writable_field_ids=[rhna_fields[band] for band in PERMIT_BANDS],
     )
     jurisdiction_schema = jurisdiction_client.get_table_schema()
     rhna_schema = rhna_client.get_table_schema()
@@ -637,6 +688,7 @@ def build_airtable_sync_plan(
     totals: Mapping[str, object],
     snapshot: Mapping[str, object],
     config: Mapping[str, object],
+    cycle_policy: Mapping[str, object],
     git_sha: str,
 ) -> dict[str, object]:
     """Build a digest-bound mixed-cycle update plan without sending writes."""
@@ -644,6 +696,13 @@ def build_airtable_sync_plan(
     if not _GIT_SHA_RE.fullmatch(git_sha):
         raise AirtableSyncConfigurationError("git_sha must be a full lowercase SHA")
     metadata, source_rows = _validate_source(totals)
+    if not isinstance(cycle_policy, Mapping):
+        raise AirtableSyncConfigurationError("Airtable cycle policy must be an object")
+    current_cycle_policy_sha256 = canonical_sha256(dict(cycle_policy))
+    if metadata["cycle_policy_sha256"] != current_cycle_policy_sha256:
+        raise AirtableSyncConfigurationError(
+            "Airtable totals were not built from the current cycle policy"
+        )
     normalized = normalize_sync_config(config)
     if snapshot.get("complete") is not True or snapshot.get("snapshot_version") != 2:
         raise AirtableSyncSnapshotError("Airtable snapshot is not complete version 2")
@@ -777,7 +836,7 @@ def build_airtable_sync_plan(
         for band in PERMIT_BANDS:
             before_aggregate[band] += before[band]
             after_aggregate[band] += after[band]
-        changed = [band for band in PERMIT_BANDS if before[band] != after[band]]
+        changed = [band for band in PERMIT_BANDS if before_raw[band] != after[band]]
         if not changed:
             unchanged_count += 1
             continue
@@ -837,7 +896,7 @@ def build_airtable_sync_plan(
         "git_sha": git_sha,
         "source_sha256": canonical_sha256(totals),
         "source_manifest_sha256": metadata["source_manifest_sha256"],
-        "cycle_policy_sha256": metadata["cycle_policy_sha256"],
+        "cycle_policy_sha256": current_cycle_policy_sha256,
         "dedupe_profile": metadata["dedupe_profile"],
         "cutoff_year": metadata["cutoff_year"],
         "source_last_updated": metadata["last_updated"],
