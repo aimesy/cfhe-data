@@ -15,6 +15,7 @@ on:
       - ".github/workflows/refresh-hcd.yml"
       - ".github/workflows/ci.yml"
       - "config/**"
+      - "data/processed/refresh_heartbeat.json"
       - "src/**"
       - "tests/**"
       - "pyproject.toml"
