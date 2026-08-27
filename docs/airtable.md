@@ -9,7 +9,7 @@ HCD sources
 validated and deduplicated current-cycle totals
     |
     v
-reviewed pull request merged to master
+validated automation pull request merged to master
     |
     v
 protected GitHub Actions job
@@ -88,7 +88,7 @@ The client has no create, delete, upsert, relink, or schema mutation method.
 
 The publication job is part of CI and has these boundaries:
 
-- it runs only for a push to `master`;
+- it runs for a push to `master`, or for the refresh workflow's explicit dispatch bound to `master`;
 - it waits for the test job;
 - it checks out the exact push SHA and confirms that SHA is still `origin/master`;
 - it uses `contents: read` permission;
@@ -96,7 +96,9 @@ The publication job is part of CI and has these boundaries:
 - concurrent publication runs queue instead of cancelling one another; and
 - pull request jobs cannot access or invoke the token.
 
-Require environment approval for the first live run. After a successful readback and manual Airtable check, the approval requirement may be removed for fully automatic publication.
+The daily refresh explicitly runs the publication command even when the reviewed HCD artifact has not changed. This makes publication idempotent and allows a transient Airtable or GitHub failure to recover on the next scheduled run.
+
+The first live run and manual readback check were completed on August 27, 2026. The temporary reviewer requirement was removed. The Environment still permits deployment only from protected branches, and every publication still requires a successful `test` job and an exact current `master` check.
 
 ## Offline comparison
 

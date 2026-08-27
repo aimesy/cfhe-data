@@ -2,11 +2,15 @@
 
 ## Normal refresh
 
-The scheduled workflow runs each Friday and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with both audit summaries, for 90 days. A refresh pull request links the workflow run that contains them.
+The scheduled workflow runs daily and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with both audit summaries, for 90 days. A refresh pull request links the workflow run that contains them.
 
 The uploaded CSV is preferred. If that endpoint is unavailable, the workflow may use the official DataStore dump. The fallback is accepted only when its synthetic `_id` field is the sole extra column, its remaining ordered fields match the pinned source header, and its logical record count matches the DataStore total.
 
-If the source digest and derived output have not changed, the run creates no commit. If they have changed, the workflow opens a draft pull request. A person reviews and merges that pull request. A merge to `master` starts the protected Airtable publication job. Nothing publishes to Webflow automatically.
+If the source digest and derived output have not changed, the run removes any obsolete automation pull request and reconciles the existing `master` revision with Airtable. If they have changed, the workflow updates the single `automation/hcd-refresh` branch and its pull request. It explicitly dispatches CI against the exact refresh commit, waits for the required `test` check, and merges only after that check succeeds. Because merges performed with GitHub's workflow token do not start another workflow implicitly, the refresh then explicitly dispatches CI on the resulting `master` commit with protected Airtable publication enabled. Nothing publishes to Webflow automatically.
+
+The workflow updates `data/processed/refresh_heartbeat.json` once per calendar month. That creates repository activity even if HCD publishes no changes for an extended period, preventing GitHub from disabling the scheduled workflow for inactivity without creating daily heartbeat commits.
+
+Any source, schema, coverage, cycle, aggregate, deduplication, test, merge, or Airtable precondition failure stops the chain. Validation failures are not merged. If Airtable publication fails after a validated merge, the daily reconciliation safely retries the same reviewed `master` revision. The workflow opens or updates one issue titled `Automated HCD refresh needs attention` and links the failed run. A successful later run closes the alert. It never bypasses branch protection or a failed required check.
 
 Local equivalent:
 
@@ -16,9 +20,9 @@ cfhe-data refresh --cutoff-year 2025
 python -m pytest -q
 ```
 
-## Review checklist
+## Failure review checklist
 
-Before merging a refresh:
+When the automation opens an alert instead of merging:
 
 1. Confirm that both resource identifiers are unchanged.
 2. Inspect the source byte lengths, SHA-256 digests, and HTTP dates.
