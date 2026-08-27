@@ -27,6 +27,9 @@ def test_refresh_workflow_uploads_only_compact_review_evidence() -> None:
     assert "automation/hcd-refresh" in workflow
     assert "data/processed/refresh_heartbeat.json" in workflow
     assert "gh workflow run ci.yml" in workflow
+    assert "statuses: write" in workflow
+    assert '"repos/${{ github.repository }}/statuses/$REFRESH_SHA"' in workflow
+    assert "Explicit CI validation passed" in workflow
     assert 'gh pr merge "$REFRESH_PR" --merge --delete-branch' in workflow
     assert "publish_airtable=true" in workflow
     assert "Automated HCD refresh needs attention" in workflow
