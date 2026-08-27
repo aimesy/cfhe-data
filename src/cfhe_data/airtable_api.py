@@ -642,8 +642,8 @@ class AirtableClient:
             payload = self._request_json(
                 method="PATCH",
                 endpoint=f"{self.base_id}/{self.table_id}",
-                query=[("returnFieldsByFieldId", "true")],
                 payload={
+                    "returnFieldsByFieldId": True,
                     "typecast": False,
                     "records": [
                         {
