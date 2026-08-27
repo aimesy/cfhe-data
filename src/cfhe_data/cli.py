@@ -251,8 +251,9 @@ def _airtable_sync(args: argparse.Namespace) -> int:
             {
                 "mode": "applied",
                 **summarize_airtable_sync_plan(final_plan),
-                "updated_count": result["updated_count"],
-                "already_current_count": result["already_current_count"],
+                "updated_count": result["updated_record_count"],
+                "already_current_count": result["already_current_record_count"],
+                "verified_count": result["verified_record_count"],
                 "batch_count": result["batch_count"],
             },
             indent=2,
