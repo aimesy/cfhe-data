@@ -54,7 +54,7 @@ cfhe-data build `
 
 ## Refresh policy
 
-The `Refresh HCD data` workflow runs daily and may be started manually. Unless a manual cutoff is supplied, it selects the most recent reporting year that has passed HCD's June 30 completeness date. It:
+The `Refresh HCD data` workflow runs daily, after relevant pipeline or configuration changes reach `master`, and on manual request. Unless a manual cutoff is supplied, it selects the most recent reporting year that has passed HCD's June 30 completeness date. It:
 
 1. verifies the pinned CKAN package and resource identities;
 2. downloads the complete source files and checks the catalog MD5 for uploaded CSV bytes;

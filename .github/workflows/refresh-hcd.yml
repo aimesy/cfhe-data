@@ -8,6 +8,16 @@ on:
         required: false
   schedule:
     - cron: "37 15 * * *"
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/refresh-hcd.yml"
+      - ".github/workflows/ci.yml"
+      - "config/**"
+      - "src/**"
+      - "tests/**"
+      - "pyproject.toml"
 
 permissions:
   actions: write

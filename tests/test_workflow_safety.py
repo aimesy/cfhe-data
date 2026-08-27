@@ -20,6 +20,9 @@ def test_refresh_workflow_uploads_only_compact_review_evidence() -> None:
     assert "Compact decision ledgers" in workflow
     assert "GITHUB_SERVER_URL" in workflow
     assert 'cron: "37 15 * * *"' in workflow
+    assert '".github/workflows/refresh-hcd.yml"' in workflow
+    assert '"config/**"' in workflow
+    assert '"src/**"' in workflow
     assert "automation/hcd-refresh" in workflow
     assert "data/processed/refresh_heartbeat.json" in workflow
     assert "gh workflow run ci.yml" in workflow

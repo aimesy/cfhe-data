@@ -2,7 +2,7 @@
 
 ## Normal refresh
 
-The scheduled workflow runs daily and may also be started manually. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with both audit summaries, for 90 days. A refresh pull request links the workflow run that contains them.
+The scheduled workflow runs daily and may also be started manually. A merge to `master` that changes the pipeline, configuration, tests, or either workflow also starts it immediately. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with both audit summaries, for 90 days. A refresh pull request links the workflow run that contains them.
 
 The uploaded CSV is preferred. If that endpoint is unavailable, the workflow may use the official DataStore dump. The fallback is accepted only when its synthetic `_id` field is the sole extra column, its remaining ordered fields match the pinned source header, and its logical record count matches the DataStore total.
 
