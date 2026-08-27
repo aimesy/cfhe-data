@@ -46,6 +46,7 @@ def test_airtable_publication_runs_only_after_ci_on_master() -> None:
     assert "needs: test" in workflow
     assert "workflow_dispatch:" in workflow
     assert "publish_airtable:" in workflow
+    assert '"data/processed/**"' in workflow
     assert "github.event_name == 'push'" in workflow
     assert "github.event_name == 'workflow_dispatch'" in workflow
     assert "github.ref == 'refs/heads/master'" in workflow
