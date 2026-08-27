@@ -83,6 +83,19 @@ class BuildArtifacts:
     total_units: int
 
 
+@dataclass(frozen=True, slots=True)
+class AirtableBuildArtifacts:
+    """Current-cycle totals and audit files intended for Airtable publication."""
+
+    jurisdiction_json: Path
+    audit_summary: Path
+    decision_ledger: Path
+    selected_rows: int
+    retained_rows: int
+    removed_rows: int
+    total_units: int
+
+
 def _display_jurisdiction(value: object) -> str:
     display = str(value or "").strip()
     display = re.sub(
@@ -344,6 +357,291 @@ def _atomic_write(path: Path, text: str) -> None:
 
 def _json_text(value: object) -> str:
     return json.dumps(value, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+
+
+def _load_airtable_cycle_policy(
+    path: Path,
+    sixth_cycle_periods: Mapping[str, PlanningPeriod],
+) -> tuple[dict[str, PlanningPeriod], dict[str, str], str]:
+    """Load an exact mixed-cycle policy and apply it to official sixth-cycle periods."""
+
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise TypeError("Airtable cycle policy must be a JSON object")
+    expected_root = {
+        "policy_version",
+        "default_cycle",
+        "expected_jurisdiction_count",
+        "expected_cycle_counts",
+        "overrides",
+        "source",
+    }
+    if set(raw) != expected_root:
+        missing = sorted(expected_root - set(raw))
+        extra = sorted(set(raw) - expected_root)
+        details = []
+        if missing:
+            details.append("missing " + ", ".join(missing))
+        if extra:
+            details.append("unexpected " + ", ".join(extra))
+        raise ValueError("Invalid Airtable cycle policy: " + "; ".join(details))
+    if raw["policy_version"] != 1:
+        raise ValueError("Airtable cycle policy version must be 1")
+    if raw["default_cycle"] != "6th":
+        raise ValueError("Airtable cycle policy default_cycle must be 6th")
+    expected_count = raw["expected_jurisdiction_count"]
+    if (
+        isinstance(expected_count, bool)
+        or not isinstance(expected_count, int)
+        or expected_count < 1
+    ):
+        raise ValueError("expected_jurisdiction_count must be a positive integer")
+    if len(sixth_cycle_periods) != expected_count:
+        raise ValueError(
+            "Sixth-cycle jurisdiction count does not match the Airtable cycle policy: "
+            f"{len(sixth_cycle_periods)} != {expected_count}"
+        )
+    source = raw["source"]
+    if not isinstance(source, str) or not source.startswith("https://www.hcd.ca.gov/"):
+        raise ValueError("Airtable cycle policy source must be an HCD HTTPS URL")
+
+    expected_cycle_counts = raw["expected_cycle_counts"]
+    if not isinstance(expected_cycle_counts, dict) or set(expected_cycle_counts) != {
+        "6th",
+        "7th",
+    }:
+        raise ValueError("expected_cycle_counts must contain only 6th and 7th")
+    for cycle, count in expected_cycle_counts.items():
+        if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+            raise ValueError(f"expected_cycle_counts.{cycle} must be nonnegative")
+    if sum(expected_cycle_counts.values()) != expected_count:
+        raise ValueError("Airtable cycle policy counts do not reconcile")
+
+    overrides = raw["overrides"]
+    if not isinstance(overrides, list):
+        raise TypeError("Airtable cycle policy overrides must be an array")
+    periods = dict(sixth_cycle_periods)
+    cycles = {key: "6th" for key in periods}
+    seen: set[str] = set()
+    override_fields = {"jurisdiction_key", "cycle", "start", "end"}
+    for position, item in enumerate(overrides):
+        if not isinstance(item, dict) or set(item) != override_fields:
+            raise ValueError(f"Invalid Airtable cycle override at index {position}")
+        key = item["jurisdiction_key"]
+        if not isinstance(key, str) or normalized_key(key) != key:
+            raise ValueError(f"Override {position} has a noncanonical jurisdiction key")
+        if key not in periods:
+            raise ValueError(
+                f"Override {position} names an unknown jurisdiction: {key}"
+            )
+        if key in seen:
+            raise ValueError(f"Duplicate Airtable cycle override: {key}")
+        seen.add(key)
+        if item["cycle"] != "7th":
+            raise ValueError(f"Override {position} cycle must be 7th")
+        try:
+            start = dt.date.fromisoformat(str(item["start"]))
+            end = dt.date.fromisoformat(str(item["end"]))
+        except ValueError as error:
+            raise ValueError(f"Override {position} has an invalid date") from error
+        if start.isoformat() != item["start"] or end.isoformat() != item["end"]:
+            raise ValueError(f"Override {position} dates must be canonical ISO dates")
+        if start > end:
+            raise ValueError(f"Override {position} starts after it ends")
+        previous = periods[key]
+        periods[key] = PlanningPeriod(
+            key=key,
+            display=previous.display,
+            start=start,
+            end=end,
+            cycle_started=True,
+        )
+        cycles[key] = "7th"
+
+    actual_counts = Counter(cycles.values())
+    if dict(sorted(actual_counts.items())) != dict(
+        sorted(expected_cycle_counts.items())
+    ):
+        raise ValueError(
+            "Airtable cycle policy overrides do not match expected_cycle_counts"
+        )
+    policy_sha256 = hashlib.sha256(
+        json.dumps(
+            raw, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+        ).encode("utf-8")
+    ).hexdigest()
+    return periods, cycles, policy_sha256
+
+
+def build_airtable_artifacts(
+    *,
+    table_a2_path: Path,
+    rhna_path: Path,
+    table_contract_path: Path,
+    rhna_contract_path: Path,
+    output_schema_path: Path,
+    cycle_policy_path: Path,
+    source_manifest: Mapping[str, object],
+    cutoff_year: int,
+    output_dir: Path,
+    audit_dir: Path,
+) -> AirtableBuildArtifacts:
+    """Build a cycle-aware, reviewed permit artifact for Airtable publication."""
+
+    table_contract = load_contract(table_contract_path)
+    rhna_contract = load_contract(rhna_contract_path)
+    sixth_periods = load_planning_periods(rhna_path, rhna_contract)
+    periods, cycles, policy_sha256 = _load_airtable_cycle_policy(
+        cycle_policy_path, sixth_periods
+    )
+    selected, selection_stats = select_permit_records(
+        table_a2_path, table_contract, periods, cutoff_year
+    )
+    result = deduplicate(selected)
+    if len(selected) != len(result.retained) + len(result.removed):
+        raise AssertionError("Airtable row conservation failed after deduplication")
+
+    retained_by_jurisdiction: dict[str, list[PermitRecord]] = defaultdict(list)
+    for record in result.retained:
+        retained_by_jurisdiction[record.jurisdiction].append(record)
+    last_updated = _source_last_updated(source_manifest)
+    complete_after = dt.date(cutoff_year + 1, 6, 30)
+    provisional = dt.date.fromisoformat(last_updated) <= complete_after
+    manifest_sha = _manifest_digest(source_manifest)
+
+    jurisdiction_rows: list[dict[str, object]] = []
+    for key, period in sorted(
+        periods.items(), key=lambda item: item[1].display.casefold()
+    ):
+        records = retained_by_jurisdiction.get(key, [])
+        categories = _vector_sum(records)
+        jurisdiction_rows.append(
+            {
+                "jurisdiction": period.display,
+                "jurisdiction_key": key,
+                "cycle": cycles[key],
+                "period_start": period.start.isoformat(),
+                "period_end": period.end.isoformat(),
+                **dict(zip(CATEGORY_NAMES, categories)),
+                "total": sum(categories),
+                "undated_permits": sum(
+                    record.units for record in records if record.undated
+                ),
+                "last_updated": last_updated,
+                "data_status": "reported" if records else "no_selected_rows",
+            }
+        )
+
+    selected_categories = _vector_sum(selected)
+    retained_categories = _vector_sum(result.retained)
+    removed_categories = _vector_sum(result.removed)
+    if (
+        tuple(
+            retained + removed
+            for retained, removed in zip(retained_categories, removed_categories)
+        )
+        != selected_categories
+    ):
+        raise AssertionError("Airtable category totals do not reconcile")
+
+    cycle_counts = dict(sorted(Counter(cycles.values()).items()))
+    metadata = {
+        "cutoff_year": cutoff_year,
+        "last_updated": last_updated,
+        "provisional": provisional,
+        "complete_after": complete_after.isoformat(),
+        "source_manifest_sha256": manifest_sha,
+        "dedupe_profile": DEDUPE_PROFILE,
+        "cycle_policy_sha256": policy_sha256,
+        "cycle_counts": cycle_counts,
+        "jurisdiction_count": len(jurisdiction_rows),
+        "selected_row_count": len(selected),
+        "selected_units": sum(selected_categories),
+        "retained_row_count": len(result.retained),
+        "removed_row_count": len(result.removed),
+        "removed_units": sum(removed_categories),
+        "undated_permits": sum(
+            record.units for record in result.retained if record.undated
+        ),
+    }
+    jurisdiction_payload = {
+        "metadata": metadata,
+        "jurisdictions": jurisdiction_rows,
+    }
+    audit_payload = {
+        "metadata": metadata,
+        "selection": selection_stats,
+        "selected_categories": dict(zip(CATEGORY_NAMES, selected_categories)),
+        "retained_categories": dict(zip(CATEGORY_NAMES, retained_categories)),
+        "removed_categories": dict(zip(CATEGORY_NAMES, removed_categories)),
+        "invariants": {
+            "row_conservation": True,
+            "category_conservation": True,
+            "jurisdiction_aggregation_reconciles": True,
+            "cycle_counts_reconcile": sum(cycle_counts.values())
+            == len(jurisdiction_rows),
+        },
+    }
+    validate_json_document(jurisdiction_payload, output_schema_path)
+
+    jurisdiction_json = output_dir / "airtable_totals.json"
+    audit_summary = output_dir / "airtable_audit_summary.json"
+    decision_ledger = audit_dir / "airtable_dedupe_decisions.jsonl"
+    _atomic_write(jurisdiction_json, _json_text(jurisdiction_payload))
+    _atomic_write(audit_summary, _json_text(audit_payload))
+
+    audit_by_index = {entry.source_index: entry for entry in result.audit}
+    ledger_lines: list[str] = []
+    for record in sorted(selected, key=lambda item: item.source_index):
+        audit = audit_by_index.get(record.source_index)
+        ledger_row: dict[str, object] = {
+            "source_record_index": record.source_index,
+            "csv_physical_line": record.csv_physical_line,
+            "row_sha256": hashlib.sha256(
+                json.dumps(
+                    record.raw_row,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    ensure_ascii=False,
+                ).encode("utf-8")
+            ).hexdigest(),
+            "jurisdiction": record.jurisdiction,
+            "cycle": cycles[record.jurisdiction],
+            "report_year": record.report_year,
+            "permit_date": record.permit_date.isoformat()
+            if record.permit_date
+            else None,
+            "categories": dict(zip(CATEGORY_NAMES, record.categories)),
+            "units": record.units,
+            "decision": "removed_earlier_snapshot" if audit else "retained",
+        }
+        if audit:
+            ledger_row.update(
+                {
+                    "rule": audit.rule,
+                    "retained_report_year": audit.retained_report_year,
+                    "retained_source_indices": list(audit.retained_source_indices),
+                    "evidence": dict(audit.details),
+                }
+            )
+        ledger_lines.append(
+            json.dumps(
+                ledger_row, sort_keys=True, ensure_ascii=False, separators=(",", ":")
+            )
+        )
+    _atomic_write(
+        decision_ledger, "\n".join(ledger_lines) + ("\n" if ledger_lines else "")
+    )
+
+    return AirtableBuildArtifacts(
+        jurisdiction_json=jurisdiction_json,
+        audit_summary=audit_summary,
+        decision_ledger=decision_ledger,
+        selected_rows=len(selected),
+        retained_rows=len(result.retained),
+        removed_rows=len(result.removed),
+        total_units=sum(retained_categories),
+    )
 
 
 def build_artifacts(

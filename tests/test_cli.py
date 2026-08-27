@@ -16,5 +16,7 @@ def test_no_publish_command_exists() -> None:
     choices = parser._subparsers._group_actions[0].choices
 
     assert "webflow-plan" in choices
+    assert "airtable-plan" in choices
     assert "webflow-apply" not in choices
+    assert "airtable-apply" not in choices
     assert "publish" not in choices

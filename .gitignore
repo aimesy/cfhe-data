@@ -17,3 +17,12 @@ data/run/
 
 # Publication output is always reviewed before it leaves GitHub.
 data/webflow/
+
+# Airtable snapshots and plans contain internal record identifiers.
+data/airtable/
+
+# Credentials must stay in GitHub Environments or the protected local store.
+.env
+.env.*
+*.token
+*.pat

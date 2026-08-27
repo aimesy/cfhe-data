@@ -118,6 +118,16 @@ def test_change_contains_only_configured_fields_and_before_after_values() -> Non
     assert "unmanaged-note" not in change["fields"]
 
 
+def test_jurisdiction_undated_value_takes_precedence_over_metadata_total() -> None:
+    source = totals()
+    source["jurisdictions"][0]["undated_permits"] = 1
+    source["metadata"]["undated_permits"] = 1
+    plan = build_change_plan(source, snapshot(), config())
+
+    change = next(item for item in plan["changes"] if item["jurisdiction"] == "Alpha")
+    assert change["fields"]["cms-undated_permits"]["after"] == 1
+
+
 def test_unknown_jurisdiction_is_rejected() -> None:
     current = snapshot()
     current["items"] = current["items"][:1]

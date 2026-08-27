@@ -1,0 +1,28 @@
+{
+  "config_version": 1,
+  "base_id": "appjwA9nMuNRewKNo",
+  "jurisdictions_table_id": "tblMHCufKHzpCWPFJ",
+  "rhna_table_id": "tblOiiBUHLapyf25e",
+  "expected_jurisdiction_record_count": 540,
+  "excluded_jurisdictions": [
+    "Sitekick City"
+  ],
+  "jurisdiction_fields": {
+    "name": "fldw8G1J4UIAvd7Yv",
+    "unincorporated": "fldgi3VnJh5F5sIOK"
+  },
+  "rhna_fields": {
+    "jurisdiction_link": "fld76ruskUKCuiEtW",
+    "cycle_link": "fldFhohelRMLKuFGv",
+    "cycle": "fldOwmEQHcSbngYA0",
+    "current": "fld1h7uuhM0O5S5ue",
+    "correct_link": "fld9D4jFSeZONagWN",
+    "vli": "fldJJnj92GzuQgwDu",
+    "li": "fldVzjVptUkD7cwsz",
+    "mi": "fldyXvK2Vy49fkKye",
+    "ami": "fld7t1u9DMWRhRmqa",
+    "rhna_start": "fldyIdnmYUnKxeRNq",
+    "rhna_end": "fldFRm5ZcZHAfa5sa",
+    "total_progress_override": "fld9HQz1i9DipXRht"
+  }
+}

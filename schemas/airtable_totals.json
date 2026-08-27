@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CFHE current-cycle Airtable permit totals",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "jurisdictions"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutoff_year",
+        "last_updated",
+        "provisional",
+        "complete_after",
+        "source_manifest_sha256",
+        "dedupe_profile",
+        "cycle_policy_sha256",
+        "cycle_counts",
+        "jurisdiction_count",
+        "selected_row_count",
+        "selected_units",
+        "retained_row_count",
+        "removed_row_count",
+        "removed_units",
+        "undated_permits"
+      ],
+      "properties": {
+        "cutoff_year": {"type": "integer", "minimum": 1900, "maximum": 3000},
+        "last_updated": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "provisional": {"type": "boolean"},
+        "complete_after": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "source_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "dedupe_profile": {"type": "string", "minLength": 1},
+        "cycle_policy_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "cycle_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["6th", "7th"],
+          "properties": {
+            "6th": {"type": "integer", "minimum": 0},
+            "7th": {"type": "integer", "minimum": 0}
+          }
+        },
+        "jurisdiction_count": {"type": "integer", "minimum": 0},
+        "selected_row_count": {"type": "integer", "minimum": 0},
+        "selected_units": {"type": "integer", "minimum": 0},
+        "retained_row_count": {"type": "integer", "minimum": 0},
+        "removed_row_count": {"type": "integer", "minimum": 0},
+        "removed_units": {"type": "integer", "minimum": 0},
+        "undated_permits": {"type": "integer", "minimum": 0}
+      }
+    },
+    "jurisdictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "jurisdiction",
+          "jurisdiction_key",
+          "cycle",
+          "period_start",
+          "period_end",
+          "acutely_low",
+          "extremely_low",
+          "very_low",
+          "low",
+          "moderate",
+          "above_moderate",
+          "total",
+          "undated_permits",
+          "last_updated",
+          "data_status"
+        ],
+        "properties": {
+          "jurisdiction": {"type": "string", "minLength": 1},
+          "jurisdiction_key": {"type": "string", "minLength": 1},
+          "cycle": {"enum": ["6th", "7th"]},
+          "period_start": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "period_end": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "acutely_low": {"type": "integer", "minimum": 0},
+          "extremely_low": {"type": "integer", "minimum": 0},
+          "very_low": {"type": "integer", "minimum": 0},
+          "low": {"type": "integer", "minimum": 0},
+          "moderate": {"type": "integer", "minimum": 0},
+          "above_moderate": {"type": "integer", "minimum": 0},
+          "total": {"type": "integer", "minimum": 0},
+          "undated_permits": {"type": "integer", "minimum": 0},
+          "last_updated": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+          "data_status": {"enum": ["reported", "no_selected_rows"]}
+        }
+      }
+    }
+  }
+}

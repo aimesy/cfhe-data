@@ -1,0 +1,83 @@
+{
+  "invariants": {
+    "category_conservation": true,
+    "cycle_counts_reconcile": true,
+    "jurisdiction_aggregation_reconciles": true,
+    "row_conservation": true
+  },
+  "metadata": {
+    "complete_after": "2026-06-30",
+    "cutoff_year": 2025,
+    "cycle_counts": {
+      "6th": 522,
+      "7th": 17
+    },
+    "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
+    "dedupe_profile": "audited-apr-snapshots-v3",
+    "jurisdiction_count": 539,
+    "last_updated": "2026-08-21",
+    "provisional": false,
+    "removed_row_count": 32194,
+    "removed_units": 60020,
+    "retained_row_count": 277170,
+    "selected_row_count": 309364,
+    "selected_units": 561621,
+    "source_manifest_sha256": "97f8e1c63e291f1c43547d82f049f5a7d9c444b7c76fa955611afad3a7e37a28",
+    "undated_permits": 643
+  },
+  "removed_categories": {
+    "above_moderate": 42471,
+    "acutely_low": 16,
+    "extremely_low": 746,
+    "low": 6453,
+    "moderate": 5016,
+    "very_low": 5318
+  },
+  "retained_categories": {
+    "above_moderate": 353737,
+    "acutely_low": 505,
+    "extremely_low": 10756,
+    "low": 59543,
+    "moderate": 41833,
+    "very_low": 35227
+  },
+  "selected_categories": {
+    "above_moderate": 396208,
+    "acutely_low": 521,
+    "extremely_low": 11502,
+    "low": 65996,
+    "moderate": 46849,
+    "very_low": 40545
+  },
+  "selection": {
+    "max_report_year": 2025,
+    "planning_periods_without_selected_rows": [
+      "ALTURAS",
+      "BIGGS",
+      "CORNING",
+      "DORRIS",
+      "DOS PALOS",
+      "GRIDLEY",
+      "HUGHSON",
+      "INDUSTRY",
+      "LAGUNA WOODS",
+      "LOYALTON",
+      "MADERA",
+      "ORLAND",
+      "POINT ARENA",
+      "SAN JOAQUIN",
+      "SAND CITY",
+      "TEHAMA",
+      "TULELAKE",
+      "TURLOCK",
+      "VERNON",
+      "WOODLAKE"
+    ],
+    "raw_jurisdiction_count": 534,
+    "raw_jurisdictions_without_planning_period": [],
+    "raw_row_count": 921393,
+    "reported_total_mismatch_rows": 0,
+    "reported_total_net_difference": 0,
+    "selected_row_count": 309364
+  }
+}
