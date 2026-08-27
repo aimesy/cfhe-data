@@ -7,10 +7,12 @@ on:
         description: Last permit year to include
         required: false
   schedule:
-    - cron: "37 15 * * 5"
+    - cron: "37 15 * * *"
 
 permissions:
+  actions: write
   contents: write
+  issues: write
   pull-requests: write
 
 concurrency:
@@ -20,11 +22,12 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
         with:
           ref: master
+          fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -63,6 +66,12 @@ jobs:
           python -m ruff check src tests
           python -m ruff format --check src tests
           python -m compileall -q src tests
+      - name: Maintain the scheduler heartbeat
+        shell: bash
+        run: |
+          month="$(date -u +%Y-%m)"
+          printf '{"last_successful_refresh_month":"%s"}\n' "$month" \
+            > data/processed/refresh_heartbeat.json
       - name: Upload deduplication review evidence
         uses: actions/upload-artifact@v4
         with:
@@ -84,30 +93,198 @@ jobs:
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-      - name: Open draft refresh pull request
+      - name: Publish the refresh branch
         if: steps.changes.outputs.changed == 'true'
+        id: refresh
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          branch="data-refresh/${GITHUB_RUN_ID}"
+          branch="automation/hcd-refresh"
           review_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          body="Automated HCD source refresh. Review the source manifest, audit summaries, and jurisdiction changes before merging. Compact decision ledgers containing each removal plus every directly matched and final referenced row are attached to the workflow run at ${review_url}. Raw source rows and the complete local ledgers are not uploaded. This workflow does not publish directly. After merge, the protected Airtable job independently revalidates and publishes an eligible plan."
+          body="Automated HCD source refresh. The source identities, schemas, coverage, aggregates, cycle policy, deduplication invariants, and tests passed. Compact decision ledgers containing each removal plus every directly matched and final referenced row are attached to ${review_url}. Raw source rows and the complete local ledgers are not uploaded. CI is dispatched explicitly for this revision. A successful check permits the bot to merge the pull request, after which a separate protected run revalidates and publishes eligible Airtable changes."
           git config user.name "cfhe-data bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$branch"
+          git switch -C "$branch"
           git add -- \
             data/processed/source_manifest.json \
             data/processed/jurisdiction_totals.csv \
             data/processed/jurisdiction_totals.json \
             data/processed/audit_summary.json \
             data/processed/airtable_totals.json \
-            data/processed/airtable_audit_summary.json
+            data/processed/airtable_audit_summary.json \
+            data/processed/refresh_heartbeat.json
           git commit -m "Refresh HCD APR data"
-          git push origin "$branch"
-          gh pr create \
-            --draft \
+          head_sha="$(git rev-parse HEAD)"
+          if git fetch --no-tags origin "+refs/heads/${branch}:refs/remotes/origin/${branch}"; then
+            lease="$(git rev-parse "refs/remotes/origin/${branch}")"
+            git push \
+              --force-with-lease="refs/heads/${branch}:${lease}" \
+              origin "HEAD:refs/heads/${branch}"
+          else
+            git push origin "HEAD:refs/heads/${branch}"
+          fi
+
+          pr_number="$(gh pr list \
+            --state open \
             --base master \
             --head "$branch" \
-            --title "Refresh HCD APR data" \
-            --body "$body"
+            --json number \
+            --jq '.[0].number // empty')"
+          if [[ -n "$pr_number" ]]; then
+            gh pr edit "$pr_number" --title "Refresh HCD APR data" --body "$body"
+            gh pr ready "$pr_number" || true
+          else
+            pr_url="$(gh pr create \
+              --base master \
+              --head "$branch" \
+              --title "Refresh HCD APR data" \
+              --body "$body")"
+            pr_number="${pr_url##*/}"
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$head_sha" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+      - name: Validate and merge the refresh
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REFRESH_BRANCH: ${{ steps.refresh.outputs.branch }}
+          REFRESH_SHA: ${{ steps.refresh.outputs.head_sha }}
+          REFRESH_PR: ${{ steps.refresh.outputs.pr_number }}
+        run: |
+          find_run() {
+            local branch="$1"
+            local sha="$2"
+            local after="$3"
+            local run_id=""
+            for _ in {1..30}; do
+              run_id="$(gh run list \
+                --workflow ci.yml \
+                --branch "$branch" \
+                --event workflow_dispatch \
+                --limit 20 \
+                --json databaseId,headSha,createdAt \
+                --jq ".[] | select(.headSha == \"$sha\" and .createdAt >= \"$after\") | .databaseId" \
+                | head -n 1)"
+              if [[ -n "$run_id" ]]; then
+                printf '%s\n' "$run_id"
+                return 0
+              fi
+              sleep 2
+            done
+            return 1
+          }
+
+          dispatch_started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run ci.yml \
+            --ref "$REFRESH_BRANCH" \
+            -f publish_airtable=false
+          validation_run="$(find_run \
+            "$REFRESH_BRANCH" \
+            "$REFRESH_SHA" \
+            "$dispatch_started")"
+          gh run watch "$validation_run" --exit-status
+          merged=false
+          for _ in {1..15}; do
+            if gh pr merge "$REFRESH_PR" --merge --delete-branch; then
+              merged=true
+              break
+            fi
+            sleep 2
+          done
+          test "$merged" = true
+
+      - name: Remove an obsolete refresh pull request
+        if: steps.changes.outputs.changed == 'false'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="automation/hcd-refresh"
+          pr_number="$(gh pr list \
+            --state open \
+            --base master \
+            --head "$branch" \
+            --json number \
+            --jq '.[0].number // empty')"
+          if [[ -n "$pr_number" ]]; then
+            gh pr close "$pr_number" --delete-branch \
+              --comment "The latest validated source now matches master."
+          fi
+
+      - name: Reconcile the current master revision with Airtable
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find_run() {
+            local sha="$1"
+            local after="$2"
+            local run_id=""
+            for _ in {1..30}; do
+              run_id="$(gh run list \
+                --workflow ci.yml \
+                --branch master \
+                --event workflow_dispatch \
+                --limit 20 \
+                --json databaseId,headSha,createdAt \
+                --jq ".[] | select(.headSha == \"$sha\" and .createdAt >= \"$after\") | .databaseId" \
+                | head -n 1)"
+              if [[ -n "$run_id" ]]; then
+                printf '%s\n' "$run_id"
+                return 0
+              fi
+              sleep 2
+            done
+            return 1
+          }
+
+          git fetch --no-tags origin \
+            +refs/heads/master:refs/remotes/origin/master
+          master_sha="$(git rev-parse refs/remotes/origin/master)"
+          dispatch_started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run ci.yml --ref master -f publish_airtable=true
+          publication_run="$(find_run "$master_sha" "$dispatch_started")"
+          gh run watch "$publication_run" --exit-status
+
+      - name: Close the refresh alert after recovery
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Automated HCD refresh needs attention"
+          issue_number="$(gh issue list \
+            --state open \
+            --search "${title} in:title" \
+            --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" \
+            | head -n 1)"
+          if [[ -n "$issue_number" ]]; then
+            gh issue close "$issue_number" \
+              --comment "The automated refresh and publication path recovered."
+          fi
+
+      - name: Open or update a refresh alert
+        if: failure()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Automated HCD refresh needs attention"
+          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          body="The scheduled HCD refresh, guarded merge, or Airtable publication failed. Inspect ${run_url}. Validation failures are not merged. Publication failures remain safe to retry on the next daily run."
+          issue_number="$(gh issue list \
+            --state open \
+            --search "${title} in:title" \
+            --json number,title \
+            --jq ".[] | select(.title == \"$title\") | .number" \
+            | head -n 1)"
+          if [[ -n "$issue_number" ]]; then
+            gh issue comment "$issue_number" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body"
+          fi

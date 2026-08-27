@@ -19,6 +19,16 @@ def test_refresh_workflow_uploads_only_compact_review_evidence() -> None:
     assert "data/run/airtable_dedupe_decisions.jsonl" not in workflow
     assert "Compact decision ledgers" in workflow
     assert "GITHUB_SERVER_URL" in workflow
+    assert 'cron: "37 15 * * *"' in workflow
+    assert "automation/hcd-refresh" in workflow
+    assert "data/processed/refresh_heartbeat.json" in workflow
+    assert "gh workflow run ci.yml" in workflow
+    assert 'gh pr merge "$REFRESH_PR" --merge --delete-branch' in workflow
+    assert "publish_airtable=true" in workflow
+    assert "Automated HCD refresh needs attention" in workflow
+    assert "Reconcile the current master revision with Airtable" in workflow
+    assert "--draft" not in workflow
+    assert "Select-Object" not in workflow
     assert "AIRTABLE_TOKEN" not in workflow
     assert "airtable-apply" not in workflow
 
@@ -30,7 +40,10 @@ def test_airtable_publication_runs_only_after_ci_on_master() -> None:
 
     assert "publish-airtable:" in workflow
     assert "needs: test" in workflow
+    assert "workflow_dispatch:" in workflow
+    assert "publish_airtable:" in workflow
     assert "github.event_name == 'push'" in workflow
+    assert "github.event_name == 'workflow_dispatch'" in workflow
     assert "github.ref == 'refs/heads/master'" in workflow
     assert "name: airtable-production" in workflow
     assert "cancel-in-progress: false" in workflow

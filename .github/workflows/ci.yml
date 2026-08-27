@@ -1,6 +1,13 @@
 name: CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      publish_airtable:
+        description: Publish the reviewed master revision to Airtable
+        required: false
+        type: boolean
+        default: false
   pull_request:
   push:
     branches:
@@ -32,7 +39,10 @@ jobs:
 
   publish-airtable:
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/master') ||
+      (github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/master' && inputs.publish_airtable)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment:

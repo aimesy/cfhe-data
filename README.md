@@ -15,10 +15,10 @@ HCD APR Table A2 + official planning periods
       sixth-cycle and current-cycle totals
                       |
                       v
-              reviewed GitHub PR
+       validated automation PR
                       |
                       v
-       protected GitHub-to-Airtable update
+       protected automatic Airtable update
 ```
 
 ## What it produces
@@ -54,7 +54,7 @@ cfhe-data build `
 
 ## Refresh policy
 
-The `Refresh HCD data` workflow runs weekly and may be started manually. Unless a manual cutoff is supplied, it selects the most recent reporting year that has passed HCD's June 30 completeness date. It:
+The `Refresh HCD data` workflow runs daily and may be started manually. Unless a manual cutoff is supplied, it selects the most recent reporting year that has passed HCD's June 30 completeness date. It:
 
 1. verifies the pinned CKAN package and resource identities;
 2. downloads the complete source files and checks the catalog MD5 for uploaded CSV bytes;
@@ -63,9 +63,12 @@ The `Refresh HCD data` workflow runs weekly and may be started manually. Unless 
 5. runs the test suite;
 6. keeps raw source records and the complete decision ledgers out of downloadable artifacts;
 7. attaches smaller review ledgers with each removal and the rows needed to inspect its direct and final references; and
-8. opens a draft pull request that links that evidence when the derived data changed.
+8. creates or refreshes one automation pull request that links that evidence when the derived data changed;
+9. explicitly dispatches CI against the exact refresh commit;
+10. merges only after the required check succeeds; and
+11. explicitly dispatches protected Airtable publication from the resulting `master` commit, or reconciles the existing `master` revision when HCD has not changed.
 
-It never merges a pull request or writes to Airtable or Webflow. Airtable publication is a separate protected job that runs only after reviewed data reaches `master`.
+A failed build, validation, or merge leaves the refresh unmerged. A publication failure stops the current run and is retried against the same reviewed `master` revision the next day. Either kind of failure opens or updates one GitHub issue, and a later successful run closes it. A small monthly heartbeat commit prevents GitHub from disabling the schedule during long periods without HCD changes. GitHub never writes to Webflow.
 
 ## Deduplication boundary
 
@@ -87,7 +90,7 @@ An eventual Webflow apply workflow requires a protected GitHub Environment, a We
 
 Without `--apply`, the command is read only. With `--apply`, it will proceed only when the source is complete, all 539 targets are unique and current, the schema still matches the pinned field IDs and types, and no Airtable progress override supersedes the permit fields. It rechecks values before each batch of ten, uses conditional updates, and verifies every record after writing. It never creates, deletes, upserts, relinks, or changes Airtable schema.
 
-The GitHub job runs only on a push to `master`, after CI, through the protected `airtable-production` environment. The PAT is limited to this base and is stored only as the `AIRTABLE_TOKEN` environment secret. See the [Airtable operations guide](docs/airtable.md).
+The GitHub job runs after CI on a push to `master` or an explicit automation dispatch bound to `master`, through the protected `airtable-production` environment. The PAT is limited to this base and is stored only as the `AIRTABLE_TOKEN` environment secret. See the [Airtable operations guide](docs/airtable.md).
 
 The older `airtable-plan` command remains available for offline comparisons from supplied snapshots. Local snapshots and plans belong under ignored `data/airtable/` because they contain Airtable record IDs.
 
