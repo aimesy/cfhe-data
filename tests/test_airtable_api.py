@@ -487,6 +487,26 @@ def test_postwrite_readback_retries_airtable_visibility_lag() -> None:
     assert result["updated_record_count"] == 1
 
 
+def test_deferred_readback_waits_once_after_all_batches() -> None:
+    sleeps: list[float] = []
+    state = {
+        f"recItem{index}": {FIELD_VLI: index, FIELD_LI: index} for index in range(11)
+    }
+    updates = [
+        update(f"recItem{index}", (index, index), (index + 100, index + 200))
+        for index in range(11)
+    ]
+    transport = StatefulTransport(state)
+
+    result = client(transport, sleeps=sleeps).update_records(
+        updates, verify_schema=False, deferred_readback_seconds=10
+    )
+
+    assert transport.patch_sizes == [10, 1]
+    assert sleeps == [10.0]
+    assert result["verified_record_count"] == 11
+
+
 def test_token_and_airtable_error_message_are_redacted() -> None:
     unsafe_message = f"invalid value containing {TOKEN}"
     transport = QueueTransport(

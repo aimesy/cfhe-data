@@ -515,6 +515,7 @@ class AirtableClient:
         *,
         batch_size: int = MAX_AIRTABLE_BATCH_SIZE,
         verify_schema: bool = True,
+        deferred_readback_seconds: float = 0,
     ) -> dict[str, Any]:
         """Conditionally update existing records, then verify fresh readback."""
 
@@ -522,6 +523,14 @@ class AirtableClient:
             raise AirtableConfigurationError("batch_size must be an integer")
         if not 1 <= batch_size <= MAX_AIRTABLE_BATCH_SIZE:
             raise AirtableConfigurationError("batch_size must be between 1 and 10")
+        if (
+            not isinstance(deferred_readback_seconds, (int, float))
+            or deferred_readback_seconds < 0
+            or deferred_readback_seconds > 60
+        ):
+            raise AirtableConfigurationError(
+                "deferred_readback_seconds must be between 0 and 60"
+            )
         normalized = self._normalize_updates(updates)
         if not normalized:
             return self._result([], batch_count=0)
@@ -529,6 +538,7 @@ class AirtableClient:
             self.get_table_schema()
 
         statuses: list[dict[str, Any]] = []
+        deferred_written: list[_NormalizedUpdate] = []
         completed_batches = 0
         for start in range(0, len(normalized), batch_size):
             batch = normalized[start : start + batch_size]
@@ -552,11 +562,18 @@ class AirtableClient:
             )
             if pending:
                 self._patch_records(pending)
-                self._verify_written_records(pending)
+                if deferred_readback_seconds:
+                    deferred_written.extend(pending)
+                else:
+                    self._verify_written_records(pending)
                 statuses.extend(
                     self._record_status(update, "updated") for update in pending
                 )
             completed_batches += 1
+
+        if deferred_written:
+            self._sleep(float(deferred_readback_seconds))
+            self._verify_written_records(deferred_written)
 
         order = {update.record_id: index for index, update in enumerate(normalized)}
         statuses.sort(key=lambda item: order[str(item["record_id"])])
