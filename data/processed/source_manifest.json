@@ -2,11 +2,11 @@
   "manifest_version": 1,
   "sources": {
     "rhna_progress_6": {
-      "bytes": 49039,
+      "bytes": 49069,
       "catalog_advertised_size": 42201,
-      "catalog_hash": "4298fb9961b56c65f48b2fe5e4bee019",
+      "catalog_hash": "a5cff45ac4eb1a9ee4cf327cc615aae1",
       "catalog_hash_match": null,
-      "catalog_last_modified": "2026-08-21T15:43:30.409246",
+      "catalog_last_modified": "2026-08-28T15:48:10.127287",
       "configured_url": "https://data.ca.gov/datastore/dump/1e80a9cf-724c-432d-8374-e9708a6a92dc",
       "content_type": "application/octet-stream",
       "datastore_fields": [
@@ -29,21 +29,21 @@
       "datastore_total": 539,
       "etag": null,
       "last_modified": null,
-      "md5": "44cceaf30bf8a0d51f3a98ef0b167ae6",
+      "md5": "5f4a8a78b133ea0c4a3e920bb3be0fa5",
       "name": "rhna_progress_6",
-      "raw_filename": "rhna_progress_6-36aa66ec9555878b.csv",
+      "raw_filename": "rhna_progress_6-c20d07117276aa74.csv",
       "resolved_url": "https://data.ca.gov/datastore/dump/1e80a9cf-724c-432d-8374-e9708a6a92dc",
       "resource_id": "1e80a9cf-724c-432d-8374-e9708a6a92dc",
-      "retrieved_at": "2026-08-21T21:31:37+00:00",
-      "sha256": "36aa66ec9555878ba92071a13ee7416e03274e280b7b8ee3de858153ab40a364",
+      "retrieved_at": "2026-08-28T22:30:13+00:00",
+      "sha256": "c20d07117276aa741bac2ac89c8b20608346cc5d0557ba45756f9418bc0cf216",
       "transport": "datastore_dump"
     },
     "table_a2": {
-      "bytes": 297917433,
+      "bytes": 297896942,
       "catalog_advertised_size": 198321227,
-      "catalog_hash": "adc97b4aa31f815cc28e5ee14f99a5b1",
+      "catalog_hash": "da64ba312bba465b7a15bb56f71a2c93",
       "catalog_hash_match": null,
-      "catalog_last_modified": "2026-08-21T15:41:06.335583",
+      "catalog_last_modified": "2026-08-28T15:46:38.928515",
       "configured_url": "https://data.ca.gov/datastore/dump/fe505d9b-8c36-42ba-ba30-08bc4f34e022",
       "content_type": "application/octet-stream",
       "datastore_fields": [
@@ -117,16 +117,16 @@
         "STD_ADDRESS",
         "SCORE"
       ],
-      "datastore_total": 921393,
+      "datastore_total": 921316,
       "etag": null,
       "last_modified": null,
-      "md5": "d8e7f4308481b4a01a0d6c3b1f23bd90",
+      "md5": "deac136ac68b82e1bf690c1340595b2a",
       "name": "table_a2",
-      "raw_filename": "table_a2-8529a407a14a418c.csv",
+      "raw_filename": "table_a2-fec07beb7e0f2187.csv",
       "resolved_url": "https://data.ca.gov/datastore/dump/fe505d9b-8c36-42ba-ba30-08bc4f34e022",
       "resource_id": "fe505d9b-8c36-42ba-ba30-08bc4f34e022",
-      "retrieved_at": "2026-08-21T21:32:03+00:00",
-      "sha256": "8529a407a14a418c95b67d0e319c4834537220fbd29e393c209d9d631c0d680e",
+      "retrieved_at": "2026-08-28T22:30:36+00:00",
+      "sha256": "fec07beb7e0f2187bba81ea5c7098edf05fc79552477af625a9636dc7405480e",
       "transport": "datastore_dump"
     }
   }

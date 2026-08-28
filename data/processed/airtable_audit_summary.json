@@ -15,14 +15,14 @@
     "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
     "dedupe_profile": "audited-apr-snapshots-v3",
     "jurisdiction_count": 539,
-    "last_updated": "2026-08-21",
+    "last_updated": "2026-08-28",
     "provisional": false,
-    "removed_row_count": 32194,
-    "removed_units": 60020,
-    "retained_row_count": 277170,
-    "selected_row_count": 309364,
-    "selected_units": 561621,
-    "source_manifest_sha256": "97f8e1c63e291f1c43547d82f049f5a7d9c444b7c76fa955611afad3a7e37a28",
+    "removed_row_count": 32203,
+    "removed_units": 60057,
+    "retained_row_count": 277140,
+    "selected_row_count": 309343,
+    "selected_units": 561623,
+    "source_manifest_sha256": "b840551e553b424d99d9f69204198b40df7eb82455ae7e3a9355ebf140f5b438",
     "undated_permits": 643
   },
   "removed_by_rule": {
@@ -40,15 +40,15 @@
     },
     "strong_linked_snapshot": {
       "categories": {
-        "above_moderate": 38871,
+        "above_moderate": 38849,
         "acutely_low": 16,
         "extremely_low": 696,
-        "low": 6219,
-        "moderate": 4254,
-        "very_low": 4943
+        "low": 6247,
+        "moderate": 4283,
+        "very_low": 4944
       },
-      "rows": 28891,
-      "units": 54999
+      "rows": 28899,
+      "units": 55035
     },
     "strong_reliable_snapshot": {
       "categories": {
@@ -80,11 +80,11 @@
         "acutely_low": 0,
         "extremely_low": 45,
         "low": 36,
-        "moderate": 1,
+        "moderate": 2,
         "very_low": 8
       },
-      "rows": 43,
-      "units": 132
+      "rows": 44,
+      "units": 133
     },
     "weak_dual_location_snapshot": {
       "categories": {
@@ -148,28 +148,28 @@
     }
   },
   "removed_categories": {
-    "above_moderate": 42471,
+    "above_moderate": 42449,
     "acutely_low": 16,
     "extremely_low": 746,
-    "low": 6453,
-    "moderate": 5016,
-    "very_low": 5318
+    "low": 6481,
+    "moderate": 5046,
+    "very_low": 5319
   },
   "retained_categories": {
-    "above_moderate": 353737,
+    "above_moderate": 353695,
     "acutely_low": 505,
     "extremely_low": 10756,
-    "low": 59543,
+    "low": 59532,
     "moderate": 41833,
-    "very_low": 35227
+    "very_low": 35245
   },
   "selected_categories": {
-    "above_moderate": 396208,
+    "above_moderate": 396144,
     "acutely_low": 521,
     "extremely_low": 11502,
-    "low": 65996,
-    "moderate": 46849,
-    "very_low": 40545
+    "low": 66013,
+    "moderate": 46879,
+    "very_low": 40564
   },
   "selection": {
     "max_report_year": 2025,
@@ -179,7 +179,6 @@
       "CORNING",
       "DORRIS",
       "DOS PALOS",
-      "GRIDLEY",
       "HUGHSON",
       "INDUSTRY",
       "LAGUNA WOODS",
@@ -197,9 +196,9 @@
     ],
     "raw_jurisdiction_count": 534,
     "raw_jurisdictions_without_planning_period": [],
-    "raw_row_count": 921393,
+    "raw_row_count": 921316,
     "reported_total_mismatch_rows": 0,
     "reported_total_net_difference": 0,
-    "selected_row_count": 309364
+    "selected_row_count": 309343
   }
 }
