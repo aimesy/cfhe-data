@@ -13,6 +13,7 @@ from cfhe_data.airtable_sync import (
     AirtableSyncStateChangedError,
     build_airtable_sync_plan,
     plan_record_updates,
+    plan_verification_updates,
     project_airtable_snapshot,
     summarize_airtable_sync_plan,
     verify_airtable_sync_plan,
@@ -193,6 +194,7 @@ def test_project_snapshot_decodes_lookup_wrappers_and_omitted_values() -> None:
         "li": "number",
         "mi": "number",
         "ami": "number",
+        "last_verified": "dateTime",
         "rhna_start": "multipleLookupValues",
         "rhna_end": "multipleLookupValues",
         "total_progress_override": "number",
@@ -338,6 +340,15 @@ def test_plan_is_cycle_aware_digest_bound_and_converts_to_updates() -> None:
     li_field = CONFIG["rhna_fields"]["li"]
     assert city_update.expected_fields == {li_field: None}
     assert city_update.desired_fields == {li_field: 2}
+    reconciled = copy.deepcopy(plan)
+    reconciled["change_count"] = 0
+    verification_updates = plan_verification_updates(reconciled, "2026-08-28T22:30:00Z")
+    assert len(verification_updates) == 2
+    verified_field = CONFIG["rhna_fields"]["last_verified"]
+    assert verification_updates[0].expected_fields == {verified_field: None}
+    assert verification_updates[0].desired_fields == {
+        verified_field: "2026-08-28T22:30:00Z"
+    }
     summary = summarize_airtable_sync_plan(plan)
     rendered = json.dumps(summary)
     assert "recExample" not in rendered
@@ -443,6 +454,7 @@ def test_project_snapshot_rejects_formula_and_lookup_option_drift(
         "li": "number",
         "mi": "number",
         "ami": "number",
+        "last_verified": "dateTime",
         "rhna_start": "multipleLookupValues",
         "rhna_end": "multipleLookupValues",
         "total_progress_override": "number",

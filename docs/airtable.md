@@ -82,6 +82,8 @@ Before each batch, the client reads every target record again. It sends at most 
 
 After all batches, the command fetches the entire snapshot again and requires zero remaining changes and exact statewide aggregates.
 
+Only after that complete readback succeeds, the command writes the same UTC timestamp to `Last APR Verified` for all 539 matched current records. This field therefore means the jurisdiction was checked against the reviewed HCD source, even when its permit figures were already correct. `Last APR Update` remains the separate Airtable timestamp for an actual target or permit value change.
+
 The client has no create, delete, upsert, relink, or schema mutation method.
 
 ## GitHub controls

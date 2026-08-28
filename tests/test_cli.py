@@ -51,7 +51,7 @@ def test_airtable_apply_reports_api_client_result_fields(
         [
             ({"stage": "initial"}, None),
             ({"stage": "current"}, StubClient()),
-            ({"stage": "final"}, None),
+            ({"stage": "final"}, StubClient()),
         ]
     )
     plans = iter(
@@ -67,6 +67,7 @@ def test_airtable_apply_reports_api_client_result_fields(
     monkeypatch.setattr(cli, "build_airtable_sync_plan", lambda **kwargs: next(plans))
     monkeypatch.setattr(cli, "verify_airtable_sync_plan", lambda *args: None)
     monkeypatch.setattr(cli, "plan_record_updates", lambda plan: [])
+    monkeypatch.setattr(cli, "plan_verification_updates", lambda plan, when: [])
     monkeypatch.setattr(
         cli,
         "summarize_airtable_sync_plan",
@@ -82,11 +83,16 @@ def test_airtable_apply_reports_api_client_result_fields(
     )
 
     assert cli._airtable_sync(args) == 0
-    assert json.loads(capsys.readouterr().out) == {
+    output = json.loads(capsys.readouterr().out)
+    assert output.pop("apr_verified_at").endswith("Z")
+    assert output == {
         "mode": "applied",
         "change_count": 0,
         "updated_count": 2,
         "already_current_count": 3,
         "verified_count": 5,
         "batch_count": 1,
+        "verification_updated_count": 2,
+        "verification_verified_count": 5,
+        "verification_batch_count": 1,
     }

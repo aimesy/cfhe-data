@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 from collections.abc import Mapping, Sequence
@@ -15,6 +16,7 @@ from .airtable_sync import (
     build_airtable_sync_plan,
     fetch_airtable_snapshot,
     plan_record_updates,
+    plan_verification_updates,
     summarize_airtable_sync_plan,
     verify_airtable_sync_plan,
 )
@@ -241,7 +243,7 @@ def _airtable_sync(args: argparse.Namespace) -> int:
     result = current_client.update_records(
         plan_record_updates(plan), verify_schema=False
     )
-    final_snapshot, _ = fetch_airtable_snapshot(token=token, config=config)
+    final_snapshot, final_client = fetch_airtable_snapshot(token=token, config=config)
     final_plan = build_airtable_sync_plan(
         totals=totals,
         snapshot=final_snapshot,
@@ -253,6 +255,15 @@ def _airtable_sync(args: argparse.Namespace) -> int:
         raise AirtableSyncBlockedError(
             "Airtable readback does not fully match the reviewed source"
         )
+    verified_at = (
+        dt.datetime.now(dt.UTC)
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+    verification_result = final_client.update_records(
+        plan_verification_updates(final_plan, verified_at), verify_schema=False
+    )
     print(
         json.dumps(
             {
@@ -262,6 +273,14 @@ def _airtable_sync(args: argparse.Namespace) -> int:
                 "already_current_count": result["already_current_record_count"],
                 "verified_count": result["verified_record_count"],
                 "batch_count": result["batch_count"],
+                "apr_verified_at": verified_at,
+                "verification_updated_count": verification_result[
+                    "updated_record_count"
+                ],
+                "verification_verified_count": verification_result[
+                    "verified_record_count"
+                ],
+                "verification_batch_count": verification_result["batch_count"],
             },
             indent=2,
         )
