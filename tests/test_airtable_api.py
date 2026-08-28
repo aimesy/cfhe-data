@@ -112,6 +112,8 @@ class StatefulTransport:
         self.patch_count = 0
         self.ambiguous_after_apply = False
         self.mismatch_after_patch = False
+        self.stale_reads_after_patch = 0
+        self._stale_records: dict[str, dict[str, Any]] = {}
         self.transient_patch_statuses: list[int] = []
         self.mutate_after_next_read: tuple[str, str, Any] | None = None
 
@@ -138,7 +140,11 @@ class StatefulTransport:
             return response(schema_payload())
         if method == "GET":
             record_id = path.rsplit("/", 1)[-1]
-            result = response(record(record_id, **self.records[record_id]))
+            source = self.records[record_id]
+            if self.stale_reads_after_patch > 0 and record_id in self._stale_records:
+                source = self._stale_records[record_id]
+                self.stale_reads_after_patch -= 1
+            result = response(record(record_id, **source))
             if self.mutate_after_next_read is not None:
                 target_id, field_id, value = self.mutate_after_next_read
                 self.records[target_id][field_id] = value
@@ -159,6 +165,7 @@ class StatefulTransport:
         for item in updates:
             assert set(item) == {"id", "fields"}
             assert item["id"] in self.records
+            self._stale_records[item["id"]] = dict(self.records[item["id"]])
             self.records[item["id"]].update(item["fields"])
         if self.ambiguous_after_apply:
             self.ambiguous_after_apply = False
@@ -465,6 +472,19 @@ def test_failed_postwrite_readback_stops_further_work() -> None:
         client(transport).update_records(
             [update("recOne123", (1, 2), (10, 20))], verify_schema=False
         )
+
+
+def test_postwrite_readback_retries_airtable_visibility_lag() -> None:
+    sleeps: list[float] = []
+    transport = StatefulTransport({"recOne123": {FIELD_VLI: 1, FIELD_LI: 2}})
+    transport.stale_reads_after_patch = 1
+
+    result = client(transport, sleeps=sleeps).update_records(
+        [update("recOne123", (1, 2), (10, 20))], verify_schema=False
+    )
+
+    assert sleeps == [0.5]
+    assert result["updated_record_count"] == 1
 
 
 def test_token_and_airtable_error_message_are_redacted() -> None:
