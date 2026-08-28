@@ -730,25 +730,32 @@ class AirtableClient:
             )
 
     def _verify_written_records(self, updates: Sequence[_NormalizedUpdate]) -> None:
-        failures: list[str] = []
-        for update in updates:
-            try:
-                record = self._read_record(update.record_id)
-            except AirtableAPIError as error:
+        remaining = list(updates)
+        for attempt in range(self._max_retries + 1):
+            failures: list[_NormalizedUpdate] = []
+            for update in remaining:
+                try:
+                    record = self._read_record(update.record_id)
+                except AirtableAPIError as error:
+                    raise AirtableWriteVerificationError(
+                        [item.record_id for item in remaining],
+                        reason="fresh readback failed",
+                    ) from error
+                fields = record["fields"]
+                if not all(
+                    _json_equal(fields.get(field_id), desired)
+                    for field_id, desired in update.desired_fields.items()
+                ):
+                    failures.append(update)
+            if not failures:
+                return
+            if attempt == self._max_retries:
                 raise AirtableWriteVerificationError(
-                    [item.record_id for item in updates],
-                    reason="fresh readback failed",
-                ) from error
-            fields = record["fields"]
-            if not all(
-                _json_equal(fields.get(field_id), desired)
-                for field_id, desired in update.desired_fields.items()
-            ):
-                failures.append(update.record_id)
-        if failures:
-            raise AirtableWriteVerificationError(
-                failures, reason="fresh readback did not match desired values"
-            )
+                    [item.record_id for item in failures],
+                    reason="fresh readback did not match desired values",
+                )
+            remaining = failures
+            self._sleep(self._retry_delay(attempt, None))
 
     def _normalize_record(self, raw_record: object) -> dict[str, Any]:
         if not isinstance(raw_record, Mapping):
