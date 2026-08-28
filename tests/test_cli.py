@@ -37,9 +37,12 @@ def test_airtable_apply_reports_api_client_result_fields(
     cycle_policy_path.write_text("{}", encoding="utf-8")
 
     class StubClient:
-        def update_records(self, updates, *, verify_schema):
+        def update_records(
+            self, updates, *, verify_schema, deferred_readback_seconds=0
+        ):
             assert updates == []
             assert verify_schema is False
+            assert deferred_readback_seconds in {0, 10}
             return {
                 "updated_record_count": 2,
                 "already_current_record_count": 3,
