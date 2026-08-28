@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 from collections import Counter
 from collections.abc import Mapping
@@ -63,6 +64,7 @@ RHNA_FIELD_NAMES = {
     "li",
     "mi",
     "ami",
+    "last_verified",
     "rhna_start",
     "rhna_end",
     "total_progress_override",
@@ -81,6 +83,7 @@ RHNA_FIELD_TYPES = {
     "li": "number",
     "mi": "number",
     "ami": "number",
+    "last_verified": "dateTime",
     "rhna_start": "multipleLookupValues",
     "rhna_end": "multipleLookupValues",
     "total_progress_override": "number",
@@ -328,6 +331,20 @@ def _formula_boolean(value: object, label: str) -> bool:
     return bool(value)
 
 
+def _optional_datetime(value: object, label: str) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise AirtableSyncSnapshotError(f"{label} must be an ISO datetime")
+    try:
+        parsed = dt.datetime.fromisoformat(value)
+    except ValueError as error:
+        raise AirtableSyncSnapshotError(f"{label} must be an ISO datetime") from error
+    if parsed.tzinfo is None:
+        raise AirtableSyncSnapshotError(f"{label} must include a timezone")
+    return value
+
+
 def _links(value: object, label: str) -> list[str]:
     if not isinstance(value, list) or any(
         not isinstance(item, str) or not item.startswith("rec") for item in value
@@ -500,6 +517,10 @@ def project_airtable_snapshot(
                     f"RHNA record {record_id}.correct_link",
                 ),
                 "permit_values": permit_values,
+                "last_verified": _optional_datetime(
+                    fields.get(rhna_fields["last_verified"]),
+                    f"RHNA record {record_id}.last_verified",
+                ),
                 "rhna_start": _lookup_date(
                     fields.get(rhna_fields["rhna_start"]),
                     f"RHNA record {record_id}.rhna_start",
@@ -560,7 +581,8 @@ def fetch_airtable_snapshot(
         base_id=str(normalized["base_id"]),
         table_id=str(normalized["rhna_table_id"]),
         managed_field_ids=list(rhna_fields.values()),
-        writable_field_ids=[rhna_fields[band] for band in PERMIT_BANDS],
+        writable_field_ids=[rhna_fields[band] for band in PERMIT_BANDS]
+        + [rhna_fields["last_verified"]],
     )
     jurisdiction_schema = jurisdiction_client.get_table_schema()
     rhna_schema = rhna_client.get_table_schema()
@@ -803,6 +825,7 @@ def build_airtable_sync_plan(
     rhna_fields = normalized["rhna_fields"]
     assert isinstance(rhna_fields, Mapping)
     changes: list[dict[str, object]] = []
+    verification_targets: list[dict[str, object]] = []
     unchanged_count = 0
     blockers: list[dict[str, object]] = []
     not_current: list[str] = []
@@ -825,6 +848,13 @@ def build_airtable_sync_plan(
             not_current.append(key)
         if rhna.get("total_progress_override") not in (None, 0):
             overrides.append(key)
+        verification_targets.append(
+            {
+                "airtable_record_id": rhna["record_id"],
+                "jurisdiction_key": key,
+                "expected_last_verified": rhna.get("last_verified"),
+            }
+        )
         permit_values = rhna.get("permit_values")
         if not isinstance(permit_values, Mapping) or set(permit_values) != set(
             PERMIT_BANDS
@@ -889,6 +919,7 @@ def build_airtable_sync_plan(
             }
         )
     changes.sort(key=lambda item: str(item["jurisdiction_key"]))
+    verification_targets.sort(key=lambda item: str(item["jurisdiction_key"]))
     plan: dict[str, object] = {
         "plan_version": 2,
         "intent": "update_existing_permit_fields_only",
@@ -908,6 +939,7 @@ def build_airtable_sync_plan(
             "base_id": normalized["base_id"],
             "rhna_table_id": normalized["rhna_table_id"],
             "field_ids": {band: rhna_fields[band] for band in PERMIT_BANDS},
+            "last_verified_field_id": rhna_fields["last_verified"],
         },
         "matched_count": len(source_rows),
         "cycle_counts": metadata["cycle_counts"],
@@ -923,6 +955,7 @@ def build_airtable_sync_plan(
         },
         "blockers": blockers,
         "changes": changes,
+        "verification_targets": verification_targets,
     }
     plan["plan_sha256"] = canonical_sha256(plan)
     return plan
@@ -965,6 +998,39 @@ def plan_record_updates(plan: Mapping[str, object]) -> list[RecordUpdate]:
                 desired_fields=dict(change["desired_fields"]),
             )
         )
+    return updates
+
+
+def plan_verification_updates(
+    plan: Mapping[str, object], verified_at: str
+) -> list[RecordUpdate]:
+    """Mark every matched current row as checked after permit validation passes."""
+
+    if plan.get("apply_eligible") is not True or plan.get("change_count") != 0:
+        raise AirtableSyncBlockedError(
+            "APR verification requires a fully reconciled Airtable plan"
+        )
+    _optional_datetime(verified_at, "verified_at")
+    target = plan.get("target")
+    targets = plan.get("verification_targets")
+    if not isinstance(target, Mapping) or not isinstance(targets, list):
+        raise AirtableSyncError("Airtable verification targets are malformed")
+    field_id = target.get("last_verified_field_id")
+    if not isinstance(field_id, str) or not field_id.startswith("fld"):
+        raise AirtableSyncError("Airtable verification field is malformed")
+    updates: list[RecordUpdate] = []
+    for item in targets:
+        if not isinstance(item, Mapping):
+            raise AirtableSyncError("Airtable verification target is malformed")
+        updates.append(
+            RecordUpdate(
+                record_id=str(item["airtable_record_id"]),
+                expected_fields={field_id: item.get("expected_last_verified")},
+                desired_fields={field_id: verified_at},
+            )
+        )
+    if len(updates) != plan.get("matched_count"):
+        raise AirtableSyncError("Airtable verification coverage is incomplete")
     return updates
 
 
