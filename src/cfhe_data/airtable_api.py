@@ -516,6 +516,7 @@ class AirtableClient:
         batch_size: int = MAX_AIRTABLE_BATCH_SIZE,
         verify_schema: bool = True,
         deferred_readback_seconds: float = 0,
+        patch_response_is_final: bool = False,
     ) -> dict[str, Any]:
         """Conditionally update existing records, then verify fresh readback."""
 
@@ -531,6 +532,8 @@ class AirtableClient:
             raise AirtableConfigurationError(
                 "deferred_readback_seconds must be between 0 and 60"
             )
+        if not isinstance(patch_response_is_final, bool):
+            raise AirtableConfigurationError("patch_response_is_final must be boolean")
         normalized = self._normalize_updates(updates)
         if not normalized:
             return self._result([], batch_count=0)
@@ -562,7 +565,9 @@ class AirtableClient:
             )
             if pending:
                 self._patch_records(pending)
-                if deferred_readback_seconds:
+                if patch_response_is_final:
+                    pass
+                elif deferred_readback_seconds:
                     deferred_written.extend(pending)
                 else:
                     self._verify_written_records(pending)
@@ -735,9 +740,19 @@ class AirtableClient:
                 record_ids, reason="the PATCH response omitted its records array"
             )
         response_ids: list[str] = []
+        desired_by_id = {update.record_id: update.desired_fields for update in updates}
         for raw_record in raw_records:
             record = self._normalize_record(raw_record)
             response_ids.append(record["id"])
+            desired = desired_by_id.get(record["id"])
+            if desired is not None and not all(
+                _json_equal(record["fields"].get(field_id), value)
+                for field_id, value in desired.items()
+            ):
+                raise AirtableWriteVerificationError(
+                    record_ids,
+                    reason="the PATCH response did not contain the desired values",
+                )
         if len(response_ids) != len(set(response_ids)) or set(response_ids) != set(
             record_ids
         ):

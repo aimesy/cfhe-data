@@ -264,7 +264,7 @@ def _airtable_sync(args: argparse.Namespace) -> int:
     verification_result = final_client.update_records(
         plan_verification_updates(final_plan, verified_at),
         verify_schema=False,
-        deferred_readback_seconds=10,
+        patch_response_is_final=True,
     )
     print(
         json.dumps(

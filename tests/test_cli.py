@@ -38,11 +38,16 @@ def test_airtable_apply_reports_api_client_result_fields(
 
     class StubClient:
         def update_records(
-            self, updates, *, verify_schema, deferred_readback_seconds=0
+            self,
+            updates,
+            *,
+            verify_schema,
+            deferred_readback_seconds=0,
+            patch_response_is_final=False,
         ):
             assert updates == []
             assert verify_schema is False
-            assert deferred_readback_seconds in {0, 10}
+            assert deferred_readback_seconds == 0
             return {
                 "updated_record_count": 2,
                 "already_current_record_count": 3,

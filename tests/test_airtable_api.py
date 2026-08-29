@@ -468,7 +468,7 @@ def test_failed_postwrite_readback_stops_further_work() -> None:
     transport = StatefulTransport({"recOne123": {FIELD_VLI: 1, FIELD_LI: 2}})
     transport.mismatch_after_patch = True
 
-    with pytest.raises(AirtableWriteVerificationError, match="did not match"):
+    with pytest.raises(AirtableWriteVerificationError, match="did not contain"):
         client(transport).update_records(
             [update("recOne123", (1, 2), (10, 20))], verify_schema=False
         )
@@ -505,6 +505,21 @@ def test_deferred_readback_waits_once_after_all_batches() -> None:
     assert transport.patch_sizes == [10, 1]
     assert sleeps == [10.0]
     assert result["verified_record_count"] == 11
+
+
+def test_patch_response_can_be_final_when_it_echoes_desired_values() -> None:
+    transport = StatefulTransport({"recOne123": {FIELD_VLI: 1, FIELD_LI: 2}})
+    transport.stale_reads_after_patch = 10
+
+    result = client(transport).update_records(
+        [update("recOne123", (1, 2), (10, 20))],
+        verify_schema=False,
+        patch_response_is_final=True,
+    )
+
+    assert transport.patch_count == 1
+    assert [call["method"] for call in transport.calls] == ["GET", "GET", "PATCH"]
+    assert result["verified_record_count"] == 1
 
 
 def test_token_and_airtable_error_message_are_redacted() -> None:
