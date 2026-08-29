@@ -258,7 +258,7 @@ def _airtable_sync(args: argparse.Namespace) -> int:
     verified_at = (
         dt.datetime.now(dt.UTC)
         .replace(microsecond=0)
-        .isoformat()
+        .isoformat(timespec="milliseconds")
         .replace("+00:00", "Z")
     )
     verification_result = final_client.update_records(
