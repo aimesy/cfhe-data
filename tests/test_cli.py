@@ -92,7 +92,8 @@ def test_airtable_apply_reports_api_client_result_fields(
 
     assert cli._airtable_sync(args) == 0
     output = json.loads(capsys.readouterr().out)
-    assert output.pop("apr_verified_at").endswith("Z")
+    verified_at = output.pop("apr_verified_at")
+    assert verified_at.endswith(".000Z")
     assert output == {
         "mode": "applied",
         "change_count": 0,
