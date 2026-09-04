@@ -9,14 +9,14 @@
     "cutoff_year": 2025,
     "dedupe_profile": "audited-apr-snapshots-v3",
     "jurisdiction_count": 539,
-    "last_updated": "2026-08-28",
+    "last_updated": "2026-09-04",
     "provisional": false,
     "removed_row_count": 32899,
     "removed_units": 60772,
     "retained_row_count": 278230,
     "selected_row_count": 311129,
     "selected_units": 563437,
-    "source_manifest_sha256": "b840551e553b424d99d9f69204198b40df7eb82455ae7e3a9355ebf140f5b438",
+    "source_manifest_sha256": "444c04ac09bdc36e6fef732ead747f125f03dee65aecc72ed2ebd48ed42803a4",
     "undated_permits": 640
   },
   "removed_by_rule": {
