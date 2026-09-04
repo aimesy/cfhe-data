@@ -6,7 +6,7 @@
       "catalog_advertised_size": 42201,
       "catalog_hash": "a5cff45ac4eb1a9ee4cf327cc615aae1",
       "catalog_hash_match": null,
-      "catalog_last_modified": "2026-08-28T15:48:10.127287",
+      "catalog_last_modified": "2026-09-04T15:44:08.136453",
       "configured_url": "https://data.ca.gov/datastore/dump/1e80a9cf-724c-432d-8374-e9708a6a92dc",
       "content_type": "application/octet-stream",
       "datastore_fields": [
@@ -41,9 +41,9 @@
     "table_a2": {
       "bytes": 297896942,
       "catalog_advertised_size": 198321227,
-      "catalog_hash": "da64ba312bba465b7a15bb56f71a2c93",
+      "catalog_hash": "5d0c241f5568dd635f6a8c380547301a",
       "catalog_hash_match": null,
-      "catalog_last_modified": "2026-08-28T15:46:38.928515",
+      "catalog_last_modified": "2026-09-04T15:42:39.746185",
       "configured_url": "https://data.ca.gov/datastore/dump/fe505d9b-8c36-42ba-ba30-08bc4f34e022",
       "content_type": "application/octet-stream",
       "datastore_fields": [
