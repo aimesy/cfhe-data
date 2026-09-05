@@ -309,18 +309,18 @@
       "very_low": 0
     },
     {
-      "above_moderate": 160,
+      "above_moderate": 238,
       "acutely_low": 0,
       "data_status": "reported",
       "extremely_low": 0,
       "jurisdiction": "Atascadero",
       "jurisdiction_key": "ATASCADERO",
       "last_updated": "2026-09-04",
-      "low": 108,
-      "moderate": 119,
-      "total": 392,
+      "low": 121,
+      "moderate": 145,
+      "total": 510,
       "undated_permits": 0,
-      "very_low": 5
+      "very_low": 6
     },
     {
       "above_moderate": 101,
@@ -1107,7 +1107,7 @@
       "very_low": 1
     },
     {
-      "above_moderate": 3868,
+      "above_moderate": 3858,
       "acutely_low": 0,
       "data_status": "reported",
       "extremely_low": 7,
@@ -1115,7 +1115,7 @@
       "jurisdiction_key": "CHULA VISTA",
       "last_updated": "2026-09-04",
       "low": 377,
-      "moderate": 926,
+      "moderate": 936,
       "total": 5296,
       "undated_permits": 0,
       "very_low": 118
@@ -3599,7 +3599,7 @@
       "very_low": 19
     },
     {
-      "above_moderate": 70705,
+      "above_moderate": 70689,
       "acutely_low": 0,
       "data_status": "reported",
       "extremely_low": 3174,
@@ -3608,12 +3608,12 @@
       "last_updated": "2026-09-04",
       "low": 10075,
       "moderate": 1490,
-      "total": 89766,
+      "total": 89747,
       "undated_permits": 526,
-      "very_low": 4322
+      "very_low": 4319
     },
     {
-      "above_moderate": 9354,
+      "above_moderate": 9356,
       "acutely_low": 0,
       "data_status": "reported",
       "extremely_low": 47,
@@ -3622,7 +3622,7 @@
       "last_updated": "2026-09-04",
       "low": 927,
       "moderate": 39,
-      "total": 10575,
+      "total": 10577,
       "undated_permits": 0,
       "very_low": 208
     },
@@ -4943,7 +4943,7 @@
       "very_low": 36
     },
     {
-      "above_moderate": 83,
+      "above_moderate": 84,
       "acutely_low": 0,
       "data_status": "reported",
       "extremely_low": 0,
@@ -4951,8 +4951,8 @@
       "jurisdiction_key": "PLACERVILLE",
       "last_updated": "2026-09-04",
       "low": 110,
-      "moderate": 36,
-      "total": 264,
+      "moderate": 37,
+      "total": 266,
       "undated_permits": 0,
       "very_low": 35
     },
@@ -7253,18 +7253,18 @@
       "very_low": 0
     },
     {
-      "above_moderate": 261,
+      "above_moderate": 305,
       "acutely_low": 0,
       "data_status": "reported",
-      "extremely_low": 23,
+      "extremely_low": 29,
       "jurisdiction": "Westminster",
       "jurisdiction_key": "WESTMINSTER",
       "last_updated": "2026-09-04",
-      "low": 233,
-      "moderate": 91,
-      "total": 654,
+      "low": 374,
+      "moderate": 129,
+      "total": 914,
       "undated_permits": 0,
-      "very_low": 46
+      "very_low": 77
     },
     {
       "above_moderate": 0,
@@ -7281,7 +7281,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 103,
+      "above_moderate": 147,
       "acutely_low": 16,
       "data_status": "reported",
       "extremely_low": 16,
@@ -7290,7 +7290,7 @@
       "last_updated": "2026-09-04",
       "low": 8,
       "moderate": 0,
-      "total": 183,
+      "total": 227,
       "undated_permits": 0,
       "very_low": 40
     },
@@ -7554,12 +7554,12 @@
     "jurisdiction_count": 539,
     "last_updated": "2026-09-04",
     "provisional": false,
-    "removed_row_count": 32899,
-    "removed_units": 60772,
-    "retained_row_count": 278230,
-    "selected_row_count": 311129,
-    "selected_units": 563437,
-    "source_manifest_sha256": "444c04ac09bdc36e6fef732ead747f125f03dee65aecc72ed2ebd48ed42803a4",
+    "removed_row_count": 32885,
+    "removed_units": 60761,
+    "retained_row_count": 278573,
+    "selected_row_count": 311458,
+    "selected_units": 563833,
+    "source_manifest_sha256": "bb1a4175c0dacbf00ba8e447b265286b4840c94a781cc69103309428e14769c7",
     "undated_permits": 640
   }
 }

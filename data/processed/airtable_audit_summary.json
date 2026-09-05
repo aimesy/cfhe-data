@@ -17,13 +17,13 @@
     "jurisdiction_count": 539,
     "last_updated": "2026-09-04",
     "provisional": false,
-    "removed_row_count": 32203,
-    "removed_units": 60057,
-    "retained_row_count": 277140,
-    "selected_row_count": 309343,
-    "selected_units": 561623,
-    "source_manifest_sha256": "444c04ac09bdc36e6fef732ead747f125f03dee65aecc72ed2ebd48ed42803a4",
-    "undated_permits": 643
+    "removed_row_count": 32189,
+    "removed_units": 60046,
+    "retained_row_count": 277481,
+    "selected_row_count": 309670,
+    "selected_units": 562017,
+    "source_manifest_sha256": "bb1a4175c0dacbf00ba8e447b265286b4840c94a781cc69103309428e14769c7",
+    "undated_permits": 641
   },
   "removed_by_rule": {
     "strong_aggregate_exception": {
@@ -40,15 +40,15 @@
     },
     "strong_linked_snapshot": {
       "categories": {
-        "above_moderate": 38849,
-        "acutely_low": 16,
-        "extremely_low": 696,
-        "low": 6247,
-        "moderate": 4283,
-        "very_low": 4944
+        "above_moderate": 38839,
+        "acutely_low": 0,
+        "extremely_low": 680,
+        "low": 6263,
+        "moderate": 4282,
+        "very_low": 4960
       },
-      "rows": 28899,
-      "units": 55035
+      "rows": 28885,
+      "units": 55024
     },
     "strong_reliable_snapshot": {
       "categories": {
@@ -148,28 +148,28 @@
     }
   },
   "removed_categories": {
-    "above_moderate": 42449,
-    "acutely_low": 16,
-    "extremely_low": 746,
-    "low": 6481,
-    "moderate": 5046,
-    "very_low": 5319
+    "above_moderate": 42439,
+    "acutely_low": 0,
+    "extremely_low": 730,
+    "low": 6497,
+    "moderate": 5045,
+    "very_low": 5335
   },
   "retained_categories": {
-    "above_moderate": 353695,
+    "above_moderate": 353838,
     "acutely_low": 505,
-    "extremely_low": 10756,
-    "low": 59532,
-    "moderate": 41833,
-    "very_low": 35245
+    "extremely_low": 10762,
+    "low": 59685,
+    "moderate": 41907,
+    "very_low": 35274
   },
   "selected_categories": {
-    "above_moderate": 396144,
-    "acutely_low": 521,
-    "extremely_low": 11502,
-    "low": 66013,
-    "moderate": 46879,
-    "very_low": 40564
+    "above_moderate": 396277,
+    "acutely_low": 505,
+    "extremely_low": 11492,
+    "low": 66182,
+    "moderate": 46952,
+    "very_low": 40609
   },
   "selection": {
     "max_report_year": 2025,
@@ -196,9 +196,9 @@
     ],
     "raw_jurisdiction_count": 534,
     "raw_jurisdictions_without_planning_period": [],
-    "raw_row_count": 921316,
+    "raw_row_count": 922102,
     "reported_total_mismatch_rows": 0,
     "reported_total_net_difference": 0,
-    "selected_row_count": 309343
+    "selected_row_count": 309670
   }
 }
