@@ -1977,14 +1977,14 @@
     {
       "above_moderate": 0,
       "acutely_low": 0,
-      "data_status": "reported",
+      "data_status": "no_selected_rows",
       "extremely_low": 0,
       "jurisdiction": "Etna",
       "jurisdiction_key": "ETNA",
       "last_updated": "2026-09-18",
-      "low": 1,
+      "low": 0,
       "moderate": 0,
-      "total": 1,
+      "total": 0,
       "undated_permits": 0,
       "very_low": 0
     },
@@ -6371,7 +6371,7 @@
       "very_low": 114
     },
     {
-      "above_moderate": 115,
+      "above_moderate": 113,
       "acutely_low": 0,
       "data_status": "reported",
       "extremely_low": 0,
@@ -6380,7 +6380,7 @@
       "last_updated": "2026-09-18",
       "low": 2,
       "moderate": 0,
-      "total": 121,
+      "total": 119,
       "undated_permits": 0,
       "very_low": 4
     },
@@ -7554,11 +7554,11 @@
     "jurisdiction_count": 539,
     "last_updated": "2026-09-18",
     "provisional": false,
-    "removed_row_count": 32887,
-    "removed_units": 60763,
-    "retained_row_count": 278691,
-    "selected_row_count": 311578,
-    "selected_units": 563950,
+    "removed_row_count": 32885,
+    "removed_units": 60761,
+    "retained_row_count": 278688,
+    "selected_row_count": 311573,
+    "selected_units": 563945,
     "source_manifest_sha256": "0eee5ab48ca88fe491ff89a3eec89ec300b68887a24c6e6be1702132c5cfb4ca",
     "undated_permits": 634
   }

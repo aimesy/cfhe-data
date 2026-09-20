@@ -1,3 +1,4 @@
+# visibility: public
 """Cycle-aware Airtable snapshot, plan, and guarded publication orchestration."""
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from .normalize import normalized_key
 from .webflow import canonical_sha256, validate_jurisdiction_totals
 
 PERMIT_BANDS = ("vli", "li", "mi", "ami")
+APR_DATE_FIELDS = ("apr_data_through", "apr_planning_start", "apr_planning_end")
 BASE_METADATA_FIELDS = {
     "cutoff_year",
     "last_updated",
@@ -87,6 +89,7 @@ RHNA_FIELD_TYPES = {
     "rhna_start": "multipleLookupValues",
     "rhna_end": "multipleLookupValues",
     "total_progress_override": "number",
+    **dict.fromkeys(APR_DATE_FIELDS, "date"),
 }
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 _GIT_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
@@ -177,8 +180,14 @@ def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
         raise AirtableSyncConfigurationError("Airtable sync config must be an object")
     raw = dict(config)
     _strict_keys(raw, SYNC_CONFIG_FIELDS, "Airtable sync config")
-    if raw["config_version"] != 1:
-        raise AirtableSyncConfigurationError("config_version must be 1")
+    version = raw["config_version"]
+    if (
+        isinstance(version, bool)
+        or not isinstance(version, int)
+        or version not in (1, 2)
+    ):
+        raise AirtableSyncConfigurationError("config_version must be 1 or 2")
+    rhna_names = RHNA_FIELD_NAMES | (set(APR_DATE_FIELDS) if version == 2 else set())
     count = raw["expected_jurisdiction_record_count"]
     if isinstance(count, bool) or not isinstance(count, int) or count < 1:
         raise AirtableSyncConfigurationError(
@@ -191,7 +200,7 @@ def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
     if len(set(excluded)) != len(excluded):
         raise AirtableSyncConfigurationError("excluded_jurisdictions has duplicates")
     result: dict[str, object] = {
-        "config_version": 1,
+        "config_version": version,
         "base_id": _string(raw["base_id"], "base_id"),
         "jurisdictions_table_id": _string(
             raw["jurisdictions_table_id"], "jurisdictions_table_id"
@@ -209,12 +218,10 @@ def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
             JURISDICTION_FIELD_NAMES,
             "jurisdiction_field_options_sha256",
         ),
-        "rhna_fields": _field_mapping(
-            raw["rhna_fields"], RHNA_FIELD_NAMES, "rhna_fields"
-        ),
+        "rhna_fields": _field_mapping(raw["rhna_fields"], rhna_names, "rhna_fields"),
         "rhna_field_options_sha256": _digest_mapping(
             raw["rhna_field_options_sha256"],
-            RHNA_FIELD_NAMES,
+            rhna_names,
             "rhna_field_options_sha256",
         ),
     }
@@ -342,6 +349,18 @@ def _optional_datetime(value: object, label: str) -> str | None:
         raise AirtableSyncSnapshotError(f"{label} must be an ISO datetime") from error
     if parsed.tzinfo is None:
         raise AirtableSyncSnapshotError(f"{label} must include a timezone")
+    return value
+
+
+def _optional_date(value: object, label: str) -> str | None:
+    if value is None or value == "":
+        return value
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        raise AirtableSyncSnapshotError(f"{label} must be an ISO date")
+    try:
+        dt.date.fromisoformat(value)
+    except ValueError as error:
+        raise AirtableSyncSnapshotError(f"{label} must be an ISO date") from error
     return value
 
 
@@ -530,6 +549,19 @@ def project_airtable_snapshot(
                     f"RHNA record {record_id}.rhna_end",
                 ),
                 "total_progress_override": override,
+                **(
+                    {
+                        "pace_dates": {
+                            name: _optional_date(
+                                fields.get(rhna_fields[name]),
+                                f"RHNA record {record_id}.{name}",
+                            )
+                            for name in APR_DATE_FIELDS
+                        }
+                    }
+                    if normalized["config_version"] == 2
+                    else {}
+                ),
             }
         )
 
@@ -582,7 +614,12 @@ def fetch_airtable_snapshot(
         table_id=str(normalized["rhna_table_id"]),
         managed_field_ids=list(rhna_fields.values()),
         writable_field_ids=[rhna_fields[band] for band in PERMIT_BANDS]
-        + [rhna_fields["last_verified"]],
+        + [rhna_fields["last_verified"]]
+        + (
+            [rhna_fields[name] for name in APR_DATE_FIELDS]
+            if normalized["config_version"] == 2
+            else []
+        ),
     )
     jurisdiction_schema = jurisdiction_client.get_table_schema()
     rhna_schema = rhna_client.get_table_schema()
@@ -650,6 +687,16 @@ def _validate_source(
                 raise AirtableSyncError(
                     f"Airtable totals row {position} {field} is invalid"
                 )
+            try:
+                dt.date.fromisoformat(row[field])
+            except ValueError as error:
+                raise AirtableSyncError(
+                    f"Airtable totals row {position} {field} is invalid"
+                ) from error
+        if row["period_end"] <= row["period_start"]:
+            raise AirtableSyncError(
+                f"Airtable totals row {position} planning period must have positive duration"
+            )
         extras_by_key[key] = {
             "cycle": cycle,
             "period_start": row["period_start"],
@@ -824,6 +871,8 @@ def build_airtable_sync_plan(
 
     rhna_fields = normalized["rhna_fields"]
     assert isinstance(rhna_fields, Mapping)
+    manages_dates = normalized["config_version"] == 2
+    data_through = dt.date(metadata["cutoff_year"], 12, 31).isoformat()
     changes: list[dict[str, object]] = []
     verification_targets: list[dict[str, object]] = []
     unchanged_count = 0
@@ -867,7 +916,32 @@ def build_airtable_sync_plan(
             before_aggregate[band] += before[band]
             after_aggregate[band] += after[band]
         changed = [band for band in PERMIT_BANDS if before_raw[band] != after[band]]
-        if not changed:
+        expected_fields = {rhna_fields[band]: before_raw[band] for band in changed}
+        desired_fields = {rhna_fields[band]: after[band] for band in changed}
+        if manages_dates:
+            pace_dates = rhna.get("pace_dates")
+            if not isinstance(pace_dates, Mapping) or set(pace_dates) != set(
+                APR_DATE_FIELDS
+            ):
+                raise AirtableSyncSnapshotError(
+                    "Airtable pace dates are missing or malformed"
+                )
+            expected_dates = {
+                name: _optional_date(
+                    pace_dates[name], f"RHNA record {rhna['record_id']}.{name}"
+                )
+                for name in APR_DATE_FIELDS
+            }
+            desired_dates = {
+                "apr_data_through": data_through,
+                "apr_planning_start": source["period_start"],
+                "apr_planning_end": source["period_end"],
+            }
+            for name in APR_DATE_FIELDS:
+                if expected_dates[name] != desired_dates[name]:
+                    expected_fields[rhna_fields[name]] = expected_dates[name]
+                    desired_fields[rhna_fields[name]] = desired_dates[name]
+        if not desired_fields:
             unchanged_count += 1
             continue
         changes.append(
@@ -876,10 +950,8 @@ def build_airtable_sync_plan(
                 "jurisdiction_record_id": target["record_id"],
                 "jurisdiction_key": key,
                 "cycle": cycle,
-                "expected_fields": {
-                    rhna_fields[band]: before_raw[band] for band in changed
-                },
-                "desired_fields": {rhna_fields[band]: after[band] for band in changed},
+                "expected_fields": expected_fields,
+                "desired_fields": desired_fields,
                 "before_total": sum(before.values()),
                 "after_total": sum(after.values()),
                 "data_status": source["data_status"],
@@ -922,7 +994,9 @@ def build_airtable_sync_plan(
     verification_targets.sort(key=lambda item: str(item["jurisdiction_key"]))
     plan: dict[str, object] = {
         "plan_version": 2,
-        "intent": "update_existing_permit_fields_only",
+        "intent": "update_existing_permit_and_apr_date_fields_only"
+        if manages_dates
+        else "update_existing_permit_fields_only",
         "apply_eligible": not blockers,
         "git_sha": git_sha,
         "source_sha256": canonical_sha256(totals),
@@ -940,6 +1014,15 @@ def build_airtable_sync_plan(
             "rhna_table_id": normalized["rhna_table_id"],
             "field_ids": {band: rhna_fields[band] for band in PERMIT_BANDS},
             "last_verified_field_id": rhna_fields["last_verified"],
+            **(
+                {
+                    "pace_date_field_ids": {
+                        name: rhna_fields[name] for name in APR_DATE_FIELDS
+                    }
+                }
+                if manages_dates
+                else {}
+            ),
         },
         "matched_count": len(source_rows),
         "cycle_counts": metadata["cycle_counts"],

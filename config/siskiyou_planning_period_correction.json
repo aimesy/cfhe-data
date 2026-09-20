@@ -1,0 +1,151 @@
+{
+  "already_corrected_source_accepted": true,
+  "corrected_period": {
+    "end": "2031-02-15",
+    "start": "2023-02-15"
+  },
+  "correction_version": 1,
+  "corroboration": {
+    "finding": "Explicitly identifies regional planning period February 15, 2023 to February 15, 2031, citing HCD schedule accessed May 17, 2023.",
+    "page": "B-4",
+    "title": "City of Mt. Shasta, Final Housing Element Appendix B, December 2023",
+    "url": "https://www.siskiyou-housing.com/wp-content/uploads/2023/12/App-B-12.20.23.pdf"
+  },
+  "expected_source_period": {
+    "end": "2030-11-15",
+    "start": "2022-11-15"
+  },
+  "jurisdiction_keys": [
+    "DORRIS",
+    "DUNSMUIR",
+    "ETNA",
+    "FORT JONES",
+    "MONTAGUE",
+    "MOUNT SHASTA",
+    "SISKIYOU COUNTY",
+    "TULELAKE",
+    "WEED",
+    "YREKA"
+  ],
+  "model_id": 740783,
+  "model_last_refresh_utc": "2026-09-19T00:04:27.5Z",
+  "notes": [
+    "These are the schedule planning-period fields with status Actual, not jurisdiction adoption dates.",
+    "The 2021 RHNA determination letter used the superseded 2022-11-15 to 2030-11-15 dates.",
+    "Source CSV bytes and permit deduplication rules remain unchanged."
+  ],
+  "observed_at": "2026-09-19T23:57:12.151492+00:00",
+  "official_rows": [
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Dorris",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Dunsmuir",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Etna",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Fort Jones",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Montague",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Mount Shasta",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Siskiyou County",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Tulelake",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Weed",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    },
+    {
+      "Cycle": "6th Cycle",
+      "Planning_period": "02/15/2023 - 02/15/2031",
+      "Status": "Actual",
+      "county": "Siskiyou",
+      "juris_name": "Yreka",
+      "plan_end_dt": "2031-02-15",
+      "plan_start_dt": "2023-02-15"
+    }
+  ],
+  "public_report_url": "https://app.powerbigov.us/view?r=eyJrIjoiNTg3ZDJjMzEtZDU1YS00ZWUwLWIxNzctOTZlZDZlMGY2NDI3IiwidCI6IjJiODI4NjQ2LWIwMzctNGZlNy04NDE1LWU5MzVjZDM0Y2Y5NiJ9",
+  "query_url": "https://wabi-us-gov-iowa-api.analysis.usgovcloudapi.net/public/reports/querydata?synchronous=true",
+  "request_path": "data/raw/hcd-siskiyou-planning-schedule-20260919-request.json",
+  "request_sha256": "677dca97edfd9cb521a8db9d48bf7efad29aab634997431d53a2d139ee96b25e",
+  "response_bytes": 3750,
+  "response_path": "data/raw/hcd-siskiyou-planning-schedule-20260919.json",
+  "response_sha256": "a4d8bcf28642c1399becbf0fbafbe4b77a398f4826835746271b9150b98c6ce0",
+  "retained_other_dates": {
+    "authority": "https://www.hcd.ca.gov/sites/default/files/docs/planning-and-community/sb423-determination-methodology.pdf",
+    "counties": [
+      "Colusa",
+      "San Luis Obispo"
+    ],
+    "page": 25,
+    "planning_end": "2028-12-31",
+    "planning_start": "2020-12-31"
+  },
+  "scope": "Siskiyou region sixth-cycle planning period only",
+  "source_url": "https://www.hcd.ca.gov/housing-open-data-tools/housing-element-regional-housing-needs-determination-schedule",
+  "unexpected_source_period": "error",
+  "visibility": "public"
+}

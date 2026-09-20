@@ -1,5 +1,5 @@
 {
-  "config_version": 1,
+  "config_version": 2,
   "base_id": "appjwA9nMuNRewKNo",
   "jurisdictions_table_id": "tblMHCufKHzpCWPFJ",
   "rhna_table_id": "tblOiiBUHLapyf25e",
@@ -28,7 +28,10 @@
     "last_verified": "fldXpJOdLLFNoN7H0",
     "rhna_start": "fldyIdnmYUnKxeRNq",
     "rhna_end": "fldFRm5ZcZHAfa5sa",
-    "total_progress_override": "fld9HQz1i9DipXRht"
+    "total_progress_override": "fld9HQz1i9DipXRht",
+    "apr_data_through": "fldogLIo5uGMV8v20",
+    "apr_planning_start": "fld23n42g581yvaX4",
+    "apr_planning_end": "fldFAqjPpDkW26Daz"
   },
   "rhna_field_options_sha256": {
     "jurisdiction_link": "e2c559df6dd5a15b31f49c60cdaed84a7d7fc900e624509388a3177fd2f4a16f",
@@ -43,6 +46,9 @@
     "last_verified": "4e7b1ad75d8f5e1cdcdd70d8e5e3aa27f2e8c8a718b49420794f694899747dc7",
     "rhna_start": "b3d47e0e32b20407e0c6b3aa9f2c815e19074fd2842d021cb6b9928d52068eec",
     "rhna_end": "8fc54a4b02cf3f798cca4082e93cb6f2076c341edb86d5bfe030425dbf5d5a59",
-    "total_progress_override": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528"
+    "total_progress_override": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "apr_data_through": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9",
+    "apr_planning_start": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9",
+    "apr_planning_end": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9"
   }
 }

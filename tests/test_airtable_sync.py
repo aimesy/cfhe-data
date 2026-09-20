@@ -1,3 +1,4 @@
+# visibility: public
 from __future__ import annotations
 
 import copy
@@ -7,11 +8,17 @@ from pathlib import Path
 import pytest
 
 from cfhe_data.airtable_sync import (
+    APR_DATE_FIELDS,
+    JURISDICTION_FIELD_TYPES,
+    RHNA_FIELD_TYPES,
     AirtableSyncBlockedError,
     AirtableSyncConfigurationError,
+    AirtableSyncError,
     AirtableSyncSnapshotError,
     AirtableSyncStateChangedError,
     build_airtable_sync_plan,
+    fetch_airtable_snapshot,
+    normalize_sync_config,
     plan_record_updates,
     plan_verification_updates,
     project_airtable_snapshot,
@@ -22,6 +29,10 @@ from cfhe_data.webflow import canonical_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = json.loads((ROOT / "config/airtable_sync.json").read_text(encoding="utf-8"))
+# Keep version-one fixtures independent of the production configuration upgrade.
+CONFIG["config_version"] = 1
+for name in APR_DATE_FIELDS:
+    CONFIG["rhna_fields"].pop(name, None)
 CONFIG["jurisdiction_field_options_sha256"] = {
     name: canonical_sha256(None) for name in CONFIG["jurisdiction_fields"]
 }
@@ -477,3 +488,298 @@ def test_project_snapshot_rejects_formula_and_lookup_option_drift(
             jurisdiction_export={},
             rhna_export={},
         )
+
+
+def _date_config() -> dict[str, object]:
+    config = copy.deepcopy(CONFIG)
+    config["config_version"] = 2
+    config["expected_jurisdiction_record_count"] = 3
+    for index, name in enumerate(APR_DATE_FIELDS):
+        config["rhna_fields"][name] = f"fldAprPaceDate{index}"
+        config["rhna_field_options_sha256"][name] = canonical_sha256(None)
+    return config
+
+
+def _date_snapshot(*, matching_permits: bool = False) -> dict[str, object]:
+    snapshot = _snapshot()
+    for row in snapshot["rhna_records"]:
+        row["pace_dates"] = dict.fromkeys(APR_DATE_FIELDS)
+    if matching_permits:
+        snapshot["rhna_records"][0]["permit_values"]["li"] = 2
+        snapshot["rhna_records"][1]["permit_values"]["ami"] = 3
+    return snapshot
+
+
+def _raw_date_snapshot_inputs(config: dict[str, object]) -> dict[str, object]:
+    snapshot = _date_snapshot()
+    jf = config["jurisdiction_fields"]
+    rf = config["rhna_fields"]
+    jurisdiction_records = [
+        {
+            "id": row["record_id"],
+            "fields": {
+                jf["name"]: row["name"],
+                jf["unincorporated"]: row["unincorporated"],
+            },
+        }
+        for row in snapshot["jurisdictions"]
+    ]
+    rhna_records = []
+    for row in snapshot["rhna_records"]:
+        values = {
+            "jurisdiction_link": row["jurisdiction_record_ids"],
+            "cycle_link": row["cycle_record_ids"],
+            "cycle": [row["cycle"]],
+            "current": 1,
+            "correct_link": 1,
+            "rhna_start": [row["rhna_start"]],
+            "rhna_end": [row["rhna_end"]],
+            **row["permit_values"],
+        }
+        rhna_records.append(
+            {
+                "id": row["record_id"],
+                "fields": {rf[name]: value for name, value in values.items()},
+            }
+        )
+    exports = {}
+    for name, records in (
+        ("jurisdiction", jurisdiction_records),
+        ("rhna", rhna_records),
+    ):
+        table_id = config[
+            "jurisdictions_table_id" if name == "jurisdiction" else "rhna_table_id"
+        ]
+        exports[f"{name}_export"] = {
+            "complete": True,
+            "terminal_offset_reached": True,
+            "base_id": config["base_id"],
+            "table_id": table_id,
+            "record_count": len(records),
+            "retrieved_at": snapshot["retrieved_at"],
+            "records": records,
+        }
+    return {
+        "config": config,
+        "jurisdiction_schema": _schema(
+            config["jurisdictions_table_id"], jf, JURISDICTION_FIELD_TYPES
+        ),
+        "rhna_schema": _schema(config["rhna_table_id"], rf, RHNA_FIELD_TYPES),
+        **exports,
+    }
+
+
+def test_version_two_requires_all_date_fields_and_option_pins() -> None:
+    assert normalize_sync_config(CONFIG)["config_version"] == 1
+    config = _date_config()
+    assert normalize_sync_config(config)["config_version"] == 2
+    for mapping in ("rhna_fields", "rhna_field_options_sha256"):
+        incomplete = copy.deepcopy(config)
+        incomplete[mapping].pop("apr_data_through")
+        with pytest.raises(
+            AirtableSyncConfigurationError, match="missing apr_data_through"
+        ):
+            normalize_sync_config(incomplete)
+
+
+@pytest.mark.parametrize("version", [True, 1.0, 3])
+def test_config_version_must_be_supported_integer(version: object) -> None:
+    with pytest.raises(AirtableSyncConfigurationError, match="config_version"):
+        normalize_sync_config({**CONFIG, "config_version": version})
+
+
+def test_date_plan_uses_reporting_cutoff_and_actual_planning_periods() -> None:
+    config = _date_config()
+    plan = build_airtable_sync_plan(
+        totals=_source(),
+        snapshot=_date_snapshot(),
+        config=config,
+        cycle_policy=CYCLE_POLICY,
+        git_sha="a" * 40,
+    )
+    updates = plan_record_updates(plan)
+    rf = config["rhna_fields"]
+    assert plan["source_aggregate_after"]["total"] == 5
+    assert plan["source_last_updated"] == "2026-08-21"
+    for update in updates:
+        assert update.desired_fields[rf["apr_data_through"]] == "2025-12-31"
+        assert update.expected_fields[rf["apr_data_through"]] is None
+    county = next(
+        update for update in updates if update.record_id == "recCountyRhna00001"
+    )
+    assert county.desired_fields[rf["apr_planning_start"]] == "2024-06-30"
+    assert county.desired_fields[rf["apr_planning_end"]] == "2029-06-30"
+    assert county.desired_fields[rf["ami"]] == 3
+
+
+def test_date_only_changes_reconcile_without_changing_permit_totals() -> None:
+    config = _date_config()
+    snapshot = _date_snapshot(matching_permits=True)
+    source = _source()
+    for row, source_row in zip(snapshot["rhna_records"], source["jurisdictions"]):
+        row["pace_dates"] = {
+            "apr_data_through": "2024-12-31",
+            "apr_planning_start": source_row["period_start"],
+            "apr_planning_end": source_row["period_end"],
+        }
+    plan = build_airtable_sync_plan(
+        totals=source,
+        snapshot=snapshot,
+        config=config,
+        cycle_policy=CYCLE_POLICY,
+        git_sha="a" * 40,
+    )
+    assert plan["change_count"] == 2
+    assert plan["airtable_aggregate_before"] == plan["source_aggregate_after"]
+    field = config["rhna_fields"]["apr_data_through"]
+    for update in plan_record_updates(plan):
+        assert update.expected_fields == {field: "2024-12-31"}
+        assert update.desired_fields == {field: "2025-12-31"}
+    with pytest.raises(AirtableSyncBlockedError, match="fully reconciled"):
+        plan_verification_updates(plan, "2026-08-28T22:30:00Z")
+    changed_state = copy.deepcopy(snapshot)
+    changed_state["rhna_records"][0]["pace_dates"]["apr_data_through"] = "2023-12-31"
+    with pytest.raises(AirtableSyncStateChangedError):
+        verify_airtable_sync_plan(plan, changed_state)
+    for row in snapshot["rhna_records"]:
+        row["pace_dates"]["apr_data_through"] = "2025-12-31"
+    reconciled = build_airtable_sync_plan(
+        totals=source,
+        snapshot=snapshot,
+        config=config,
+        cycle_policy=CYCLE_POLICY,
+        git_sha="a" * 40,
+    )
+    assert reconciled["change_count"] == 0
+    assert reconciled["unchanged_count"] == 2
+    assert plan_record_updates(reconciled) == []
+    assert len(plan_verification_updates(reconciled, "2026-08-28T22:30:00Z")) == 2
+
+
+def test_version_two_rejects_a_snapshot_without_managed_dates() -> None:
+    with pytest.raises(AirtableSyncSnapshotError, match="pace dates are missing"):
+        build_airtable_sync_plan(
+            totals=_source(),
+            snapshot=_snapshot(),
+            config=_date_config(),
+            cycle_policy=CYCLE_POLICY,
+            git_sha="a" * 40,
+        )
+
+
+@pytest.mark.parametrize(
+    "value", ["2025-02-29", "2025-13-01", "20251231", "2025-12-31T00:00:00Z"]
+)
+def test_invalid_snapshot_date_is_rejected(value: str) -> None:
+    config = _date_config()
+    inputs = _raw_date_snapshot_inputs(config)
+    inputs["rhna_export"]["records"][0]["fields"][
+        config["rhna_fields"]["apr_data_through"]
+    ] = value
+    with pytest.raises(
+        AirtableSyncSnapshotError, match="apr_data_through must be an ISO date"
+    ):
+        project_airtable_snapshot(**inputs)
+
+
+def test_project_snapshot_preserves_dates_and_empty_old_values() -> None:
+    config = _date_config()
+    inputs = _raw_date_snapshot_inputs(config)
+    fields = inputs["rhna_export"]["records"][0]["fields"]
+    fields[config["rhna_fields"]["apr_data_through"]] = "2024-12-31"
+    fields[config["rhna_fields"]["apr_planning_start"]] = ""
+    snapshot = project_airtable_snapshot(**inputs)
+    row = next(
+        row
+        for row in snapshot["rhna_records"]
+        if row["record_id"] == "recExampleRhna0001"
+    )
+    assert row["pace_dates"] == {
+        "apr_data_through": "2024-12-31",
+        "apr_planning_start": "",
+        "apr_planning_end": None,
+    }
+
+
+@pytest.mark.parametrize(
+    "attribute, value, message",
+    [
+        ("type", "dateTime", "pinned type"),
+        ("options", {"dateFormat": {"name": "us"}}, "pinned options"),
+    ],
+)
+def test_date_schema_drift_is_rejected(
+    attribute: str, value: object, message: str
+) -> None:
+    config = _date_config()
+    inputs = _raw_date_snapshot_inputs(config)
+    field_id = config["rhna_fields"]["apr_data_through"]
+    field = next(
+        item for item in inputs["rhna_schema"]["fields"] if item["id"] == field_id
+    )
+    field[attribute] = value
+    with pytest.raises(AirtableSyncSnapshotError, match=message):
+        project_airtable_snapshot(**inputs)
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("period_start", "2023-02-29"),
+        ("period_end", "2031-13-01"),
+        ("period_end", "2023-01-01"),
+        ("period_end", "2022-12-31"),
+    ],
+)
+def test_source_planning_dates_must_form_a_valid_positive_period(
+    field: str, value: str
+) -> None:
+    source = _source()
+    source["jurisdictions"][0][field] = value
+    with pytest.raises(AirtableSyncError, match="invalid|positive duration"):
+        build_airtable_sync_plan(
+            totals=source,
+            snapshot=_date_snapshot(),
+            config=_date_config(),
+            cycle_policy=CYCLE_POLICY,
+            git_sha="a" * 40,
+        )
+
+
+def test_version_two_client_write_allowlist_adds_only_the_apr_dates(
+    monkeypatch,
+) -> None:
+    config = _date_config()
+    inputs = _raw_date_snapshot_inputs(config)
+    clients = []
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.config = kwargs
+            clients.append(self)
+
+        def get_table_schema(self):
+            prefix = (
+                "jurisdiction"
+                if self.config["table_id"] == config["jurisdictions_table_id"]
+                else "rhna"
+            )
+            return inputs[f"{prefix}_schema"]
+
+        def list_records(self, **kwargs):
+            prefix = (
+                "jurisdiction"
+                if self.config["table_id"] == config["jurisdictions_table_id"]
+                else "rhna"
+            )
+            return inputs[f"{prefix}_export"]
+
+    monkeypatch.setattr("cfhe_data.airtable_sync.AirtableClient", FakeClient)
+    snapshot, client = fetch_airtable_snapshot(token="test-token", config=config)
+    assert snapshot["complete"] is True
+    assert client is clients[1]
+    rf = config["rhna_fields"]
+    assert set(client.config["writable_field_ids"]) == {
+        rf[name]
+        for name in ("vli", "li", "mi", "ami", "last_verified", *APR_DATE_FIELDS)
+    }

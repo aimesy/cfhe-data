@@ -1,3 +1,4 @@
+# visibility: public
 """Validated HCD ingestion, aggregation, and artifact generation."""
 
 from __future__ import annotations
@@ -65,6 +66,27 @@ RHNA_NUMERIC_FIELDS = (
     "ABOVE MOD UNITS",
     "RHNA ABOVE MOD",
 )
+
+# HCD's live regional schedule, verified 2026-09-19, supersedes the dates
+# still present in the sixth-cycle CSV for these jurisdictions only.
+# https://www.hcd.ca.gov/housing-open-data-tools/housing-element-regional-housing-needs-determination-schedule
+# Exact official rows and raw-response hash: config/siskiyou_planning_period_correction.json.
+SISKIYOU_SIXTH_CYCLE_KEYS = frozenset(
+    {
+        "DORRIS",
+        "DUNSMUIR",
+        "ETNA",
+        "FORT JONES",
+        "MONTAGUE",
+        "MOUNT SHASTA",
+        "SISKIYOU COUNTY",
+        "TULELAKE",
+        "WEED",
+        "YREKA",
+    }
+)
+SISKIYOU_PREVIOUS_PERIOD = (dt.date(2022, 11, 15), dt.date(2030, 11, 15))
+SISKIYOU_CURRENT_PERIOD = (dt.date(2023, 2, 15), dt.date(2031, 2, 15))
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,6 +157,16 @@ def load_planning_periods(
             start, end = parse_planning_period(
                 row["Planning Period"], record=record_index
             )
+            if key in SISKIYOU_SIXTH_CYCLE_KEYS:
+                if (start, end) not in (
+                    SISKIYOU_PREVIOUS_PERIOD,
+                    SISKIYOU_CURRENT_PERIOD,
+                ):
+                    raise ValueError(
+                        f"Unreviewed Siskiyou planning period at record {record_index}: "
+                        f"{key}, {start} to {end}"
+                    )
+                start, end = SISKIYOU_CURRENT_PERIOD
             for field in RHNA_NUMERIC_FIELDS:
                 parse_nonnegative_integer(row[field], field=field, record=record_index)
             started_text = row["6th Cycle Started"].strip().upper()

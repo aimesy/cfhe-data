@@ -187,6 +187,65 @@ def _webflow_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def _table_b_review(args: argparse.Namespace) -> int:
+    from .rhna_review import build_table_b_review
+
+    baseline = _read_object(args.totals, "Current permit totals")
+    cycle_policy = _read_object(args.cycle_policy, "Cycle policy")
+    report = build_table_b_review(
+        baseline=baseline, manifest_path=args.manifest, cycle_policy=cycle_policy
+    )
+    _write_json(args.output, report)
+    print(
+        json.dumps(
+            {
+                "report": str(args.output),
+                "compared_jurisdiction_count": report["compared_jurisdiction_count"],
+                "missing_jurisdiction_count": len(report["missing_jurisdictions"]),
+                "source_error_count": len(report["source_errors"]),
+                "unexplained_difference_count": len(report["unexplained_differences"]),
+                "ready_for_publication_review": report["ready_for_publication_review"],
+            },
+            indent=2,
+        )
+    )
+    return 0 if report["ready_for_publication_review"] else 2
+
+
+def _pace_review(args: argparse.Namespace) -> int:
+    from .pace_review import build_pace_review
+
+    report = build_pace_review(
+        totals=_read_object(args.totals, "Current permit totals"),
+        cycle_policy=_read_object(args.cycle_policy, "Cycle policy"),
+        schema=_read_object(args.schema, "Airtable schema"),
+        snapshot=_read_object(args.snapshot, "Airtable pace snapshot"),
+        baseline_totals=_read_object(
+            args.baseline_totals, "Before-change permit totals"
+        )
+        if args.baseline_totals is not None
+        else None,
+    )
+    _write_json(args.output, report)
+    print(
+        json.dumps(
+            {
+                "report": str(args.output),
+                "compared_jurisdiction_count": report["compared_jurisdiction_count"],
+                "count_changes": report["count_changes"],
+                "status_change_count": report["status_change_count"],
+                "before_status_counts": report["before_status_counts"],
+                "after_status_counts": report["after_status_counts"],
+                "ready_for_schema_migration_review": report[
+                    "ready_for_schema_migration_review"
+                ],
+            },
+            indent=2,
+        )
+    )
+    return 0 if report["ready_for_schema_migration_review"] else 2
+
+
 def _airtable_plan(args: argparse.Namespace) -> int:
     totals = _read_object(args.totals, "Jurisdiction totals")
     snapshot = _read_object(args.airtable_snapshot, "Airtable snapshot")
@@ -357,6 +416,40 @@ def build_parser() -> argparse.ArgumentParser:
     plan.add_argument("--mapping", type=Path, required=True)
     plan.add_argument("--output", type=Path, required=True)
     plan.set_defaults(handler=_webflow_plan)
+
+    pace_review = subparsers.add_parser(
+        "pace-review",
+        help="Review the planning-period benchmark with unchanged permit totals",
+    )
+    pace_review.add_argument("--schema", type=Path, required=True)
+    pace_review.add_argument("--snapshot", type=Path, required=True)
+    pace_review.add_argument("--baseline-totals", type=Path)
+    pace_review.add_argument(
+        "--totals", type=Path, default=Path("data/processed/airtable_totals.json")
+    )
+    pace_review.add_argument(
+        "--cycle-policy", type=Path, default=Path("config/airtable_cycles.json")
+    )
+    pace_review.add_argument(
+        "--output", type=Path, default=Path("data/airtable/pace_review.json")
+    )
+    pace_review.set_defaults(handler=_pace_review)
+
+    table_b_review = subparsers.add_parser(
+        "table-b-review",
+        help="Compare submitted Table B sources and report missing or conflicting totals",
+    )
+    table_b_review.add_argument("--manifest", type=Path, required=True)
+    table_b_review.add_argument(
+        "--cycle-policy", type=Path, default=Path("config/airtable_cycles.json")
+    )
+    table_b_review.add_argument(
+        "--totals", type=Path, default=Path("data/processed/airtable_totals.json")
+    )
+    table_b_review.add_argument(
+        "--output", type=Path, default=Path("data/run/table_b_review.json")
+    )
+    table_b_review.set_defaults(handler=_table_b_review)
 
     airtable_plan = subparsers.add_parser(
         "airtable-plan",

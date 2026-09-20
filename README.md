@@ -78,6 +78,24 @@ Rows with weak identifiers require an exact raw fingerprint, except for `YEAR`, 
 
 See [methodology](docs/methodology.md), [provenance](docs/provenance.md), and [operations](docs/operations.md).
 
+## Planning-period pace
+
+The permit counter uses each jurisdiction’s HCD planning-period start and end. Config version 2 of the Airtable publisher also maintains `APR Data Through`, `APR Planning Period Start`, and `APR Planning Period End`. The reporting cutoff is December 31 of the source year, not the refresh date. Pace is RHNA multiplied by the elapsed fraction of that planning period, capped at the period boundaries. Equality qualifies as on target.
+
+`cfhe-data pace-review --schema <schema.json> --snapshot <snapshot.json>` prepares a complete offline comparison with unchanged counts, proposed metadata updates, and exact formula replacements. Snapshots and plans contain record IDs and belong under ignored `data/airtable/`. See [the pace correction](docs/pace-correction.md).
+
+## Table B counter review
+
+The production artifacts above still count Table A2 permits from the planning-period start. They do not yet include all projection-period credit. A separate `table-b-review` command checks submitted Table B sources against those artifacts and calculates pace at the APR reporting cutoff. It never writes to Airtable or substitutes missing reports with zero.
+
+The initial source manifest covers Los Angeles, Petaluma, and South San Francisco. Source files must match the URLs and SHA-256 digests in `config/table_b_sources_2025.json` and remain under ignored `data/raw/`.
+
+```powershell
+cfhe-data table-b-review --manifest config/table_b_sources_2025.json
+```
+
+The command writes `data/run/table_b_review.json` and returns a nonzero status while coverage is incomplete, source validation fails, or differences beyond projection-period credit need reconciliation. City reports can omit records present in newer statewide data, so this command does not generate replacement permit values. See [the Table B review](docs/table-b-review.md).
+
 ## Webflow
 
 `cfhe-data webflow-plan` can compare a reviewed totals file with a complete caller supplied CMS snapshot. It produces a digest bound plan containing only changed fields and their before and after values. It makes no network call and has no apply function.
@@ -86,7 +104,7 @@ An eventual Webflow apply workflow requires a protected GitHub Environment, a We
 
 ## Airtable publication
 
-`cfhe-data airtable-sync` is the production GitHub-to-Airtable path. It fetches the complete base and schema, maps every source jurisdiction through its canonical key and the Airtable unincorporated flag, selects the declared sixth or seventh cycle row, and plans changes to only VLI, LI, MI, and AMI permit fields.
+`cfhe-data airtable-sync` is the production GitHub-to-Airtable path. It fetches the complete base and schema, maps every source jurisdiction through its canonical key and the Airtable unincorporated flag, and selects the declared sixth or seventh cycle row. Config version 1 manages VLI, LI, MI, and AMI permits. Version 2 additionally manages the APR reporting cutoff and planning dates.
 
 Without `--apply`, the command is read only. With `--apply`, it will proceed only when the source is complete, all 539 targets are unique and current, the schema still matches the pinned field IDs and types, and no Airtable progress override supersedes the permit fields. It rechecks values before each batch of ten, uses conditional updates, and verifies every record after writing. It never creates, deletes, upserts, relinks, or changes Airtable schema.
 

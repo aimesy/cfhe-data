@@ -17,11 +17,11 @@
     "jurisdiction_count": 539,
     "last_updated": "2026-09-18",
     "provisional": false,
-    "removed_row_count": 32191,
-    "removed_units": 60048,
-    "retained_row_count": 277596,
-    "selected_row_count": 309787,
-    "selected_units": 562131,
+    "removed_row_count": 32189,
+    "removed_units": 60046,
+    "retained_row_count": 277593,
+    "selected_row_count": 309782,
+    "selected_units": 562126,
     "source_manifest_sha256": "0eee5ab48ca88fe491ff89a3eec89ec300b68887a24c6e6be1702132c5cfb4ca",
     "undated_permits": 635
   },
@@ -40,15 +40,15 @@
     },
     "strong_linked_snapshot": {
       "categories": {
-        "above_moderate": 38840,
+        "above_moderate": 38838,
         "acutely_low": 0,
         "extremely_low": 680,
         "low": 6263,
         "moderate": 4283,
         "very_low": 4960
       },
-      "rows": 28887,
-      "units": 55026
+      "rows": 28885,
+      "units": 55024
     },
     "strong_reliable_snapshot": {
       "categories": {
@@ -148,7 +148,7 @@
     }
   },
   "removed_categories": {
-    "above_moderate": 42440,
+    "above_moderate": 42438,
     "acutely_low": 0,
     "extremely_low": 730,
     "low": 6497,
@@ -156,18 +156,18 @@
     "very_low": 5335
   },
   "retained_categories": {
-    "above_moderate": 353896,
+    "above_moderate": 353894,
     "acutely_low": 505,
     "extremely_low": 10764,
-    "low": 59691,
+    "low": 59690,
     "moderate": 41928,
     "very_low": 35299
   },
   "selected_categories": {
-    "above_moderate": 396336,
+    "above_moderate": 396332,
     "acutely_low": 505,
     "extremely_low": 11494,
-    "low": 66188,
+    "low": 66187,
     "moderate": 46974,
     "very_low": 40634
   },
@@ -179,6 +179,7 @@
       "CORNING",
       "DORRIS",
       "DOS PALOS",
+      "ETNA",
       "HUGHSON",
       "INDUSTRY",
       "LAGUNA WOODS",
@@ -199,6 +200,6 @@
     "raw_row_count": 922309,
     "reported_total_mismatch_rows": 0,
     "reported_total_net_difference": 0,
-    "selected_row_count": 309787
+    "selected_row_count": 309782
   }
 }
