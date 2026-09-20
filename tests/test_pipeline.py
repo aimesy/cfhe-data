@@ -1,13 +1,22 @@
+# visibility: public
 from __future__ import annotations
 
 import csv
+import datetime as dt
 import hashlib
 import json
 from pathlib import Path
 
 import pytest
 
-from cfhe_data.pipeline import build_airtable_artifacts, build_artifacts
+from cfhe_data.pipeline import (
+    RHNA_NUMERIC_FIELDS,
+    build_airtable_artifacts,
+    build_artifacts,
+    load_planning_periods,
+    select_permit_records,
+)
+from cfhe_data.schema import CsvContract
 
 OUTPUT_SCHEMA = Path(__file__).resolve().parents[1] / "schemas/jurisdiction_totals.json"
 AIRTABLE_OUTPUT_SCHEMA = (
@@ -489,3 +498,115 @@ def test_airtable_artifact_uses_declared_cycle_per_jurisdiction(
             output_dir=tmp_path / "out",
             audit_dir=tmp_path / "audit",
         )
+
+
+def _planning_period_fixture(tmp_path: Path, periods: dict[str, str]):
+    fields = (
+        "Jurisdiction",
+        "Planning Period",
+        "6th Cycle Started",
+        *RHNA_NUMERIC_FIELDS,
+    )
+    path = tmp_path / "rhna-periods.csv"
+    write_csv(
+        path,
+        fields,
+        [
+            {
+                "Jurisdiction": key,
+                "Planning Period": period,
+                "6th Cycle Started": "TRUE",
+                **dict.fromkeys(RHNA_NUMERIC_FIELDS, "0"),
+            }
+            for key, period in periods.items()
+        ],
+    )
+    return path, CsvContract(required_columns=fields)
+
+
+@pytest.mark.parametrize(
+    "source_period", ["11/15/2022 - 11/15/2030", "02/15/2023 - 02/15/2031"]
+)
+def test_siskiyou_correction_matches_verified_official_jurisdictions(
+    tmp_path: Path, source_period: str
+) -> None:
+    provenance_path = (
+        OUTPUT_SCHEMA.parents[1] / "config/siskiyou_planning_period_correction.json"
+    )
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    official = provenance["official_rows"]
+    path, contract = _planning_period_fixture(
+        tmp_path,
+        {
+            **{row["juris_name"]: source_period for row in official},
+            "Colusa": "12/31/2020 - 12/31/2028",
+            "San Luis Obispo": "12/31/2020 - 12/31/2028",
+        },
+    )
+    periods = load_planning_periods(path, contract)
+
+    assert len(official) == 10
+    assert {row["juris_name"].upper() for row in official} == set(
+        provenance["jurisdiction_keys"]
+    )
+    for row in official:
+        period = periods[row["juris_name"].upper()]
+        assert period.start.isoformat() == row["plan_start_dt"] == "2023-02-15"
+        assert period.end.isoformat() == row["plan_end_dt"] == "2031-02-15"
+    for key in ("COLUSA", "SAN LUIS OBISPO"):
+        assert periods[key].start == dt.date(2020, 12, 31)
+        assert periods[key].end == dt.date(2028, 12, 31)
+
+
+@pytest.mark.parametrize(
+    "unreviewed_period", ["02/15/2023 - 02/15/2039", "11/15/2022 - 02/15/2031"]
+)
+def test_siskiyou_period_correction_rejects_unreviewed_source_dates(
+    tmp_path: Path, unreviewed_period: str
+) -> None:
+    path, contract = _planning_period_fixture(tmp_path, {"Yreka": unreviewed_period})
+    with pytest.raises(ValueError, match="Unreviewed Siskiyou planning period"):
+        load_planning_periods(path, contract)
+
+
+def test_siskiyou_permits_use_corrected_start_and_end_boundaries(
+    tmp_path: Path,
+) -> None:
+    path, contract = _planning_period_fixture(
+        tmp_path, {"Yreka": "11/15/2022 - 11/15/2030"}
+    )
+    periods = load_planning_periods(path, contract)
+    assert set(periods) == {"YREKA"}
+    table = tmp_path / "boundary-permits.csv"
+    dates = [
+        "2022-11-15",
+        "2022-12-31",
+        "2023-02-14",
+        "2023-02-15",
+        "2030-11-15",
+        "2031-02-15",
+        "2031-02-16",
+    ]
+    write_csv(
+        table,
+        TABLE_FIELDS,
+        [
+            permit_row(
+                JURIS_NAME="Yreka",
+                JURS_TRACKING_ID=f"BOUNDARY-{index}",
+                YEAR=value[:4],
+                BP_ISSUE_DT1=value,
+            )
+            for index, value in enumerate(dates)
+        ],
+    )
+
+    selected, _stats = select_permit_records(
+        table, CsvContract(required_columns=TABLE_FIELDS), periods, 2031
+    )
+
+    assert [row.permit_date.isoformat() for row in selected] == [
+        "2023-02-15",
+        "2030-11-15",
+        "2031-02-15",
+    ]

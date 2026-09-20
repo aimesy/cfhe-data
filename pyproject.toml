@@ -9,7 +9,7 @@ description = "Reproducible HCD APR data pipeline for the Fair Housing Elements 
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "California YIMBY" }]
-dependencies = ["jsonschema>=4.23"]
+dependencies = ["jsonschema>=4.23", "openpyxl>=3.1.5"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.9"]

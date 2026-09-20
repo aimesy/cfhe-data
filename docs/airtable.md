@@ -15,19 +15,19 @@ validated automation pull request merged to master
 protected GitHub Actions job
     |
     v
-four existing Airtable permit fields
+four existing Airtable permit fields and their APR reporting/planning dates
 ```
 
 ## Data ownership
 
-HCD data processed in GitHub controls only the four permit bands:
+HCD data processed in GitHub controls the permit bands:
 
 - Airtable VLI = acutely low + extremely low + very low
 - Airtable LI = low
 - Airtable MI = moderate
 - Airtable AMI = above moderate
 
-Undated permits are already included in those bands and are never added again. Airtable continues to control every other tracker field.
+Undated permits are already included in those bands and are never added again. Config version 2 also manages `APR Data Through`, `APR Planning Period Start`, and `APR Planning Period End`. These are date fields tied to the same source artifact: December 31 of `cutoff_year`, `period_start`, and `period_end`. The publication code leaves existing RHNA and HE date lookups unchanged. Config version 1 retains the original permit-only behavior.
 
 The publication artifact is `data/processed/airtable_totals.json`. It declares one target cycle and one HCD counting period per jurisdiction. The default is the official sixth-cycle period. `config/airtable_cycles.json` replaces that period for the 17 jurisdictions now in the seventh cycle. Airtable dates are not used as counting windows.
 
@@ -78,13 +78,13 @@ The GitHub job adds `--apply`. The plan is eligible only when:
 - Airtable has not changed since the plan was built; and
 - the running Git commit is still the head of `master`.
 
-Before each batch, the client reads every target record again. It sends at most ten existing-record updates and includes only changed permit fields. It then reads every updated record back. A value that matches neither the reviewed old value nor the desired new value stops the batch. A rerun after an interrupted request safely accepts records that already contain the desired values.
+Before each batch, the client reads every target record again. It sends at most ten existing-record updates and includes only changed permit fields and, under config version 2, changed APR dates. It then reads every updated record back. A value that matches neither the reviewed old value nor the desired new value stops the batch. A rerun after an interrupted request safely accepts records that already contain the desired values.
 
 After all batches, the command fetches the entire snapshot again and requires zero remaining changes and exact statewide aggregates.
 
 Only after that complete readback succeeds, the command writes the same UTC timestamp to `Last APR Verified` for all 539 matched current records. This field therefore means the jurisdiction was checked against the reviewed HCD source, even when its permit figures were already correct. `Last APR Update` remains the separate Airtable timestamp for an actual target or permit value change.
 
-The client has no create, delete, upsert, relink, or schema mutation method.
+The client has no create, delete, upsert, relink, or schema mutation method. Date-field creation and pace-formula migration are separate one-time setup. The ordinary automation still needs no schema-write permission. See [pace correction](pace-correction.md) for the formula behavior and before/after review.
 
 ## GitHub controls
 

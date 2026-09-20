@@ -1,0 +1,88 @@
+{
+  "visibility": "public",
+  "manifest_version": 1,
+  "reporting_year": 2025,
+  "sources": [
+    {
+      "jurisdiction_key": "LOS ANGELES",
+      "format": "hcd_workbook",
+      "path": "../data/raw/losangeles2025.xlsm",
+      "url": "https://planning.lacity.gov/odocument/49d91c5e-4825-43dc-a267-3918c1efa3df/26_06_11_LosAngeles2025_TabC_TempData.xlsm",
+      "sha256": "a24a11bd89fe68213010e3baba906fcab675e725b564d3b3b5ff94e0af9d41ab"
+    },
+    {
+      "jurisdiction_key": "PETALUMA",
+      "format": "reviewed_pdf",
+      "path": "../data/raw/petaluma2025-apr-20260504.pdf",
+      "url": "https://storage.googleapis.com/proudcity/petalumaca/2026/05/e1f6a290-2025-housing-element-apr-updated-05.04.pdf",
+      "sha256": "c7855cbe9e5718091d9653024bde0f9685a9257fba6e4199b96d55b3f6dff7f1",
+      "page": 7,
+      "values": {
+        "jurisdiction_key": "PETALUMA",
+        "cycle": "6th",
+        "reporting_year": 2025,
+        "data_through": "2025-12-31",
+        "period_start": "2023-01-31",
+        "period_end": "2031-01-31",
+        "permit_values": {
+          "vli": 184,
+          "li": 132,
+          "mi": 36,
+          "ami": 300
+        },
+        "allocation_values": {
+          "vli": 499,
+          "li": 288,
+          "mi": 313,
+          "ami": 810
+        },
+        "total": 652,
+        "total_allocation": 1910,
+        "projection_credit": 287,
+        "projection_credit_by_income": {
+          "vli": 59,
+          "li": 1,
+          "mi": 12,
+          "ami": 215
+        }
+      }
+    },
+    {
+      "jurisdiction_key": "SOUTH SAN FRANCISCO",
+      "format": "reviewed_pdf",
+      "path": "../data/raw/south-san-francisco2025-apr.pdf",
+      "url": "https://ci-ssf-ca.legistar.com/View.ashx?GUID=3CF40CBF-6D84-404B-AC8F-E19C01161F5C&ID=15331701&M=F",
+      "sha256": "a867624c22489b89373da4e5d5b34fc973ec7925df4c2706b8d8ac1e943a9cea",
+      "page": 33,
+      "values": {
+        "jurisdiction_key": "SOUTH SAN FRANCISCO",
+        "cycle": "6th",
+        "reporting_year": 2025,
+        "data_through": "2025-12-31",
+        "period_start": "2023-01-31",
+        "period_end": "2031-01-31",
+        "permit_values": {
+          "vli": 69,
+          "li": 109,
+          "mi": 87,
+          "ami": 505
+        },
+        "allocation_values": {
+          "vli": 871,
+          "li": 502,
+          "mi": 720,
+          "ami": 1863
+        },
+        "total": 770,
+        "total_allocation": 3956,
+        "projection_credit": 28,
+        "projection_credit_by_income": {
+          "vli": 1,
+          "li": 6,
+          "mi": 15,
+          "ami": 6
+        }
+      }
+    }
+  ]
+}
