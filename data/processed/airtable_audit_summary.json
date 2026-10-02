@@ -15,15 +15,15 @@
     "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
     "dedupe_profile": "audited-apr-snapshots-v3",
     "jurisdiction_count": 539,
-    "last_updated": "2026-09-25",
+    "last_updated": "2026-10-02",
     "provisional": false,
-    "removed_row_count": 32225,
-    "removed_units": 60086,
-    "retained_row_count": 277795,
-    "selected_row_count": 310020,
-    "selected_units": 562516,
-    "source_manifest_sha256": "2e4de801e211153b8e52afd6584d80d5f91517d2d2b6da8a666d5815e50601cb",
-    "undated_permits": 635
+    "removed_row_count": 32219,
+    "removed_units": 59697,
+    "retained_row_count": 277730,
+    "selected_row_count": 309949,
+    "selected_units": 556034,
+    "source_manifest_sha256": "759c3ec0ebf51ab3cb0a0dd654df159a6c83d209c35b427674d4521ebdce2076",
+    "undated_permits": 47
   },
   "removed_by_rule": {
     "strong_aggregate_exception": {
@@ -40,27 +40,27 @@
     },
     "strong_linked_snapshot": {
       "categories": {
-        "above_moderate": 38859,
+        "above_moderate": 38851,
         "acutely_low": 0,
-        "extremely_low": 680,
-        "low": 6271,
-        "moderate": 4287,
+        "extremely_low": 377,
+        "low": 6273,
+        "moderate": 4283,
         "very_low": 4967
       },
-      "rows": 28921,
-      "units": 55064
+      "rows": 28918,
+      "units": 54751
     },
     "strong_reliable_snapshot": {
       "categories": {
-        "above_moderate": 841,
+        "above_moderate": 771,
         "acutely_low": 0,
-        "extremely_low": 5,
+        "extremely_low": 0,
         "low": 177,
-        "moderate": 317,
+        "moderate": 316,
         "very_low": 238
       },
-      "rows": 560,
-      "units": 1578
+      "rows": 557,
+      "units": 1502
     },
     "strong_reused_id_exception": {
       "categories": {
@@ -148,27 +148,27 @@
     }
   },
   "removed_categories": {
-    "above_moderate": 42459,
+    "above_moderate": 42381,
     "acutely_low": 0,
-    "extremely_low": 730,
-    "low": 6505,
-    "moderate": 5050,
+    "extremely_low": 422,
+    "low": 6507,
+    "moderate": 5045,
     "very_low": 5342
   },
   "retained_categories": {
-    "above_moderate": 354124,
+    "above_moderate": 354141,
     "acutely_low": 505,
-    "extremely_low": 10764,
-    "low": 59735,
-    "moderate": 41956,
+    "extremely_low": 4669,
+    "low": 59733,
+    "moderate": 41943,
     "very_low": 35346
   },
   "selected_categories": {
-    "above_moderate": 396583,
+    "above_moderate": 396522,
     "acutely_low": 505,
-    "extremely_low": 11494,
+    "extremely_low": 5091,
     "low": 66240,
-    "moderate": 47006,
+    "moderate": 46988,
     "very_low": 40688
   },
   "selection": {
@@ -197,9 +197,9 @@
     ],
     "raw_jurisdiction_count": 534,
     "raw_jurisdictions_without_planning_period": [],
-    "raw_row_count": 922507,
+    "raw_row_count": 922800,
     "reported_total_mismatch_rows": 0,
     "reported_total_net_difference": 0,
-    "selected_row_count": 310020
+    "selected_row_count": 309949
   }
 }
