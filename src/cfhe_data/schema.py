@@ -21,6 +21,7 @@ class CsvContract:
     allow_additional_columns: bool = True
     ordered_columns: tuple[str, ...] | None = None
     ignored_columns: tuple[str, ...] = ()
+    column_aliases: tuple[tuple[str, str], ...] = ()
 
 
 def load_contract(path: Path) -> CsvContract:
@@ -38,6 +39,7 @@ def load_contract(path: Path) -> CsvContract:
             else None
         ),
         ignored_columns=tuple(str(field) for field in raw.get("ignored_columns", ())),
+        column_aliases=tuple(raw.get("column_aliases", {}).items()),
     )
 
 
@@ -69,9 +71,14 @@ def validate_header(
             {field for field in raw_fields if raw_fields.count(field) > 1}
         )
         raise ValueError(f"{source} has duplicate columns: {', '.join(duplicates)}")
+    aliases = dict(contract.column_aliases)
     fields = tuple(
-        field for field in raw_fields if field not in contract.ignored_columns
+        aliases.get(field, field)
+        for field in raw_fields
+        if field not in contract.ignored_columns
     )
+    if contract.unique_columns and len(fields) != len(set(fields)):
+        raise ValueError(f"{source} has duplicate columns after alias mapping")
     if contract.ordered_columns is not None and fields != contract.ordered_columns:
         raise ValueError(
             f"{source} ordered header changed: expected {len(contract.ordered_columns)} "
@@ -106,6 +113,10 @@ class ValidatedCsv:
         self.fieldnames = validate_header(
             self.reader.fieldnames, self.contract, str(self.path)
         )
+        aliases = dict(self.contract.column_aliases)
+        self.reader.fieldnames = [
+            aliases.get(field, field) for field in self.reader.fieldnames
+        ]
         return self
 
     def __exit__(self, *_args) -> None:
