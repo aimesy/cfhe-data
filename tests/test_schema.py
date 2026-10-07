@@ -7,6 +7,7 @@ import pytest
 
 from cfhe_data.schema import (
     CsvContract,
+    load_contract,
     open_validated_csv,
     parse_date,
     parse_nonnegative_integer,
@@ -48,6 +49,62 @@ def test_header_can_ignore_only_datastore_synthetic_id(tmp_path: Path) -> None:
 
     assert opened.fieldnames == ("A", "B")
     assert rows[0][2] == {"A": "one", "B": "two"}
+
+
+def test_rhna_dump_aliases_preserve_raw_bytes_and_match_uploaded_rows(
+    tmp_path: Path,
+) -> None:
+    contract = load_contract(
+        Path(__file__).resolve().parents[1] / "schemas/rhna_progress_6.json"
+    )
+    aliases = dict(contract.column_aliases)
+    inverse_aliases = {label: field_id for field_id, label in aliases.items()}
+    fields = contract.ordered_columns
+    values = ["Example City", "01/01/2023 - 12/31/2031", "TRUE", *["0"] * 12]
+    uploaded = tmp_path / "uploaded.csv"
+    uploaded.write_text(
+        ",".join(fields) + "\n" + ",".join(values) + "\n", encoding="utf-8"
+    )
+    dump = tmp_path / "dump.csv"
+    dump.write_text(
+        "_id,"
+        + ",".join(inverse_aliases.get(name, name) for name in fields)
+        + "\n1,"
+        + ",".join(values)
+        + "\n",
+        encoding="utf-8",
+    )
+    original_bytes = dump.read_bytes()
+
+    with open_validated_csv(uploaded, contract) as opened:
+        uploaded_rows = [row for _index, _line, row in opened.rows()]
+    with open_validated_csv(dump, contract) as opened:
+        dump_rows = [row for _index, _line, row in opened.rows()]
+
+    assert dump_rows == uploaded_rows
+    assert dump_rows[0]["6th Cycle Started"] == "TRUE"
+    assert dump.read_bytes() == original_bytes
+
+
+@pytest.mark.parametrize(
+    "fields, message",
+    [
+        (("A", "a"), "duplicate columns after alias mapping"),
+        (("B", "a"), "ordered header changed"),
+        (("unknown_a", "B"), "ordered header changed"),
+        (("a", "B", "extra"), "ordered header changed"),
+        (("a",), "ordered header changed"),
+    ],
+)
+def test_csv_aliases_keep_exact_schema_checks(fields, message: str) -> None:
+    contract = CsvContract(
+        ("A", "B"),
+        ordered_columns=("A", "B"),
+        allow_additional_columns=False,
+        column_aliases=(("a", "A"),),
+    )
+    with pytest.raises(ValueError, match=message):
+        validate_header(fields, contract, "fixture")
 
 
 def test_validated_csv_rejects_short_rows(tmp_path: Path) -> None:

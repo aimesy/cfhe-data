@@ -56,6 +56,7 @@ class FetchResult:
     catalog_last_modified: str | None
     datastore_total: int | None
     datastore_fields: tuple[str, ...] | None
+    datastore_field_ids: tuple[str, ...] | None
 
     def manifest_entry(self) -> dict[str, object]:
         entry = asdict(self)
@@ -167,9 +168,9 @@ def _datastore_metadata(
     spec: SourceSpec,
     *,
     opener: Callable[..., BinaryIO],
-) -> tuple[int | None, tuple[str, ...] | None]:
+) -> tuple[int | None, tuple[str, ...] | None, tuple[str, ...] | None]:
     if spec.datastore_api_url is None:
-        return None, None
+        return None, None, None
     result = _get_json(spec.datastore_api_url, opener=opener)
     total = result.get("total")
     fields = result.get("fields")
@@ -178,14 +179,41 @@ def _datastore_metadata(
     if not isinstance(fields, list):
         raise SourceFetchError(f"DataStore returned no field list for {spec.name}")
     field_names: list[str] = []
+    field_ids: list[str] = []
+    seen_ids: set[str] = set()
     for field in fields:
-        if not isinstance(field, Mapping) or not isinstance(field.get("id"), str):
+        if (
+            not isinstance(field, Mapping)
+            or not isinstance(field.get("id"), str)
+            or not field["id"].strip()
+        ):
             raise SourceFetchError(
                 f"DataStore returned an invalid field for {spec.name}"
             )
-        if field["id"] != "_id":
-            field_names.append(field["id"])
-    return total, tuple(field_names)
+        field_id = field["id"]
+        if field_id in seen_ids:
+            raise SourceFetchError(
+                f"DataStore returned duplicate fields for {spec.name}"
+            )
+        seen_ids.add(field_id)
+        if field_id == "_id":
+            continue
+        # CKAN can sanitize storage IDs while retaining the CSV header as a label.
+        info = field.get("info", {})
+        if not isinstance(info, Mapping):
+            raise SourceFetchError(
+                f"DataStore returned invalid field info for {spec.name}"
+            )
+        label = info.get("label", field_id)
+        if not isinstance(label, str) or not label.strip():
+            raise SourceFetchError(
+                f"DataStore returned an invalid field label for {spec.name}"
+            )
+        field_ids.append(field_id)
+        field_names.append(label)
+    if len(field_names) != len(set(field_names)):
+        raise SourceFetchError(f"DataStore returned duplicate fields for {spec.name}")
+    return total, tuple(field_names), tuple(field_ids)
 
 
 def fetch_source(
@@ -196,7 +224,9 @@ def fetch_source(
 ) -> FetchResult:
     raw_dir.mkdir(parents=True, exist_ok=True)
     catalog = _catalog_metadata(spec, opener=opener)
-    datastore_total, datastore_fields = _datastore_metadata(spec, opener=opener)
+    datastore_total, datastore_fields, datastore_field_ids = _datastore_metadata(
+        spec, opener=opener
+    )
     failures: list[str] = []
     for configured_url in spec.urls:
         temp_path: Path | None = None
@@ -286,6 +316,7 @@ def fetch_source(
                     ),
                     datastore_total=datastore_total,
                     datastore_fields=datastore_fields,
+                    datastore_field_ids=datastore_field_ids,
                 )
         except (OSError, SourceFetchError, urllib.error.URLError) as error:
             failures.append(f"{configured_url}: {type(error).__name__}: {error}")

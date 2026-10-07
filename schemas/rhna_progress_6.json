@@ -17,6 +17,13 @@
   ],
   "unique_columns": true,
   "ignored_columns": ["_id"],
+  "column_aliases": {
+    "unsafe_6th_cycle_started": "6th Cycle Started",
+    "vli__": "VLI %",
+    "li__": "LI %",
+    "mod__": "MOD %",
+    "above_mod__": "ABOVE MOD %"
+  },
   "allow_additional_columns": false,
   "ordered_columns": [
     "Jurisdiction",

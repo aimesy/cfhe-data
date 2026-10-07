@@ -83,7 +83,10 @@ def write_csv(path: Path, fields: tuple[str, ...], rows: list[dict[str, str]]) -
         writer.writerows(rows)
 
 
-def test_pipeline_filters_deduplicates_and_marks_undated_rows(tmp_path: Path) -> None:
+@pytest.mark.parametrize("datastore_change", [None, "reorder", "missing", "extra"])
+def test_pipeline_filters_deduplicates_and_marks_undated_rows(
+    tmp_path: Path, datastore_change: str | None
+) -> None:
     table = tmp_path / "table.csv"
     rhna = tmp_path / "rhna.csv"
     write_csv(
@@ -155,7 +158,13 @@ def test_pipeline_filters_deduplicates_and_marks_undated_rows(tmp_path: Path) ->
         json.dumps({"required_columns": list(TABLE_FIELDS)}), encoding="utf-8"
     )
     rhna_contract.write_text(
-        json.dumps({"required_columns": list(rhna_fields)}), encoding="utf-8"
+        json.dumps(
+            {
+                "required_columns": list(rhna_fields),
+                "ordered_columns": list(rhna_fields),
+            }
+        ),
+        encoding="utf-8",
     )
     table_bytes = table.read_bytes()
     rhna_bytes = rhna.read_bytes()
@@ -173,9 +182,34 @@ def test_pipeline_filters_deduplicates_and_marks_undated_rows(tmp_path: Path) ->
                 "bytes": len(rhna_bytes),
                 "sha256": hashlib.sha256(rhna_bytes).hexdigest(),
                 "md5": hashlib.md5(rhna_bytes, usedforsecurity=False).hexdigest(),
+                "datastore_total": 3,
+                "datastore_fields": list(rhna_fields),
             },
         },
     }
+
+    datastore_fields = manifest["sources"]["rhna_progress_6"]["datastore_fields"]
+    if datastore_change == "reorder":
+        datastore_fields.reverse()
+    elif datastore_change == "missing":
+        datastore_fields.pop()
+    elif datastore_change == "extra":
+        datastore_fields.append("Unexpected Column")
+    if datastore_change is not None:
+        with pytest.raises(ValueError, match="RHNA DataStore fields do not match"):
+            build_artifacts(
+                table_a2_path=table,
+                rhna_path=rhna,
+                table_contract_path=table_contract,
+                rhna_contract_path=rhna_contract,
+                output_schema_path=OUTPUT_SCHEMA,
+                source_manifest=manifest,
+                cutoff_year=2025,
+                output_dir=tmp_path / "out",
+                audit_dir=tmp_path / "audit",
+            )
+        assert not (tmp_path / "out").exists()
+        return
 
     artifacts = build_artifacts(
         table_a2_path=table,
