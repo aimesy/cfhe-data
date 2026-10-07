@@ -15,14 +15,14 @@
     "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
     "dedupe_profile": "audited-apr-snapshots-v3",
     "jurisdiction_count": 539,
-    "last_updated": "2026-10-02",
+    "last_updated": "2026-10-06",
     "provisional": false,
     "removed_row_count": 32219,
     "removed_units": 59697,
     "retained_row_count": 277730,
     "selected_row_count": 309949,
     "selected_units": 556034,
-    "source_manifest_sha256": "759c3ec0ebf51ab3cb0a0dd654df159a6c83d209c35b427674d4521ebdce2076",
+    "source_manifest_sha256": "139dba92c7abe52f6ceeded32a970d425dd5ddd0cabd8545a69acf6e1de99723",
     "undated_permits": 47
   },
   "removed_by_rule": {
