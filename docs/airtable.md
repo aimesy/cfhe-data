@@ -105,3 +105,17 @@ The first live run and manual readback check were completed on August 27, 2026. 
 ## Offline comparison
 
 `cfhe-data airtable-plan` remains as a legacy offline comparison tool. It accepts a caller supplied snapshot and writes a digest bound local plan. It cannot make a network call or write to Airtable. Use `airtable-sync` for the production path.
+
+## Housing element compliance
+
+`cfhe-data he-compliance-sync` keeps `HE Compliance` and `Review Date` on each jurisdiction's current RHNA & HE record equal to HCD's [Housing Element Compliance Report](https://data.ca.gov/dataset/housing-element-compliance-report), which HCD updates weekly. The Builder's Remedy, SB 423, and Jurisdictions compliance fields read those two fields, so the public Builder's Remedy view on yimbylaw.org follows HCD. HCD certification is the standard YIMBY Law uses for that page.
+
+HCD `In` maps to `In Compliance`. HCD `Out` and `Enforcement Out` map to `Out of Compliance`. The command resolves the pinned CKAN resource in `config/he_compliance_sync.json`, checks the exact CSV header, and matches names by the same rules as the permit sync, with accents folded so `San José` matches `SAN JOSE`.
+
+Review Date drives the "Applied until" text in the Builder's Remedy formula. HCD's Reviewed Date is the latest review, which can be later than the first compliance finding, so the sync writes it only in the same update that changes a record's compliance status. Otherwise the existing Review Date stays.
+
+A jurisdiction is held, and left unchanged, when it has no single current RHNA & HE record, when HCD reports a different cycle than the current Airtable record, or when HCD's status is blank. Holds are listed in the output. Publication is blocked when any Airtable jurisdiction is missing from HCD or the reverse, when the matched count differs from the configured count, when a pinned field type or option set changes, or when more than a quarter of jurisdictions would be out of compliance.
+
+Apply rebuilds the plan from fresh Airtable and HCD reads and requires the same plan digest before writing. Updates are conditional on the reviewed old values and are read back, and a final full read must show no remaining changes. Volunteer edits to `HE Compliance` that disagree with HCD are overwritten on the next run.
+
+The step runs in the `publish-airtable` job after the permit publication, so the daily refresh runs it. The first application, on October 19, 2026, corrected 95 records: 75 from out of compliance to in, 15 blank to in, 3 blank to out, and Brisbane and Tulare from in to out.

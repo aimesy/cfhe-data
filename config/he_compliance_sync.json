@@ -1,0 +1,43 @@
+{
+  "config_version": 1,
+  "base_id": "appjwA9nMuNRewKNo",
+  "jurisdictions_table_id": "tblMHCufKHzpCWPFJ",
+  "rhna_table_id": "tblOiiBUHLapyf25e",
+  "excluded_jurisdictions": [
+    "Sitekick City"
+  ],
+  "expected_jurisdiction_count": 539,
+  "max_out_of_compliance_share": 0.25,
+  "jurisdiction_fields": {
+    "name": "fldw8G1J4UIAvd7Yv",
+    "unincorporated": "fldgi3VnJh5F5sIOK"
+  },
+  "jurisdiction_field_options_sha256": {
+    "name": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "unincorporated": "3a81b4a0cfd73a29214b9281a2f35534fd2fb9ea37f03995c399a6a21fd286b6"
+  },
+  "rhna_fields": {
+    "jurisdiction_link": "fld76ruskUKCuiEtW",
+    "cycle": "fldOwmEQHcSbngYA0",
+    "current": "fld1h7uuhM0O5S5ue",
+    "he_compliance": "fldShfN899CMV3EtG",
+    "review_date": "fldn4NPwTPf2r7yDo"
+  },
+  "rhna_field_options_sha256": {
+    "jurisdiction_link": "e2c559df6dd5a15b31f49c60cdaed84a7d7fc900e624509388a3177fd2f4a16f",
+    "cycle": "5cfe7fb9338d6c4a54a291869aa498d906489c36add4b79c6fb2c43bdfef2a4c",
+    "current": "efb9cd9ffdb12001f16b54a937dab7f37db7bc031f90f409489a1425a021d26d",
+    "he_compliance": "1af252e875bc9003e335c2ac25df5846167d3cd50742075ec828079080000d3c",
+    "review_date": "d7fef7aadc57c4391ac52e5a302ea492c0ef476fb42d5314cf77d13dc1e6e497"
+  },
+  "source": {
+    "package_id": "housing-element-compliance-report",
+    "resource_id": "2dcd1cd4-1348-4fc5-9c9c-219f82daac00",
+    "landing_page": "https://data.ca.gov/dataset/housing-element-compliance-report"
+  },
+  "compliance_values": {
+    "In": "In Compliance",
+    "Out": "Out of Compliance",
+    "Enforcement Out": "Out of Compliance"
+  }
+}

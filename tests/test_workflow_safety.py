@@ -60,6 +60,9 @@ def test_airtable_publication_runs_only_after_ci_on_master() -> None:
     assert '--git-sha "$GITHUB_SHA"' in workflow
     assert "--cycle-policy config/airtable_cycles.json" in workflow
     assert "--apply" in workflow
-    assert workflow.count('test "$(git rev-parse origin/master)" = "$GITHUB_SHA"') == 2
+    assert workflow.count('test "$(git rev-parse origin/master)" = "$GITHUB_SHA"') == 3
+    compliance_step = workflow.split("Sync HCD housing element compliance", 1)[1]
+    assert 'test "$(git rev-parse origin/master)" = "$GITHUB_SHA"' in compliance_step
+    assert "cfhe-data he-compliance-sync" in compliance_step
     assert "pull_request_target" not in workflow
     assert "actions/upload-artifact" not in workflow
