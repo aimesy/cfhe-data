@@ -199,7 +199,7 @@ def parse_date(value: object) -> dt.date | None:
         return None
     for date_format in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y", "%Y/%m/%d"):
         try:
-            return dt.datetime.strptime(text, date_format).date()  # noqa: DTZ007
+            return dt.datetime.strptime(text, date_format).date()
         except ValueError:
             continue
     return None

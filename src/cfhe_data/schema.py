@@ -168,7 +168,7 @@ def parse_date(
         raise ValueError(f"{field} is blank at record {record}")
     for date_format in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%y", "%Y/%m/%d"):
         try:
-            return dt.datetime.strptime(text, date_format).date()  # noqa: DTZ007
+            return dt.datetime.strptime(text, date_format).date()
         except ValueError:
             continue
     raise ValueError(f"{field} has an invalid date at record {record}: {text!r}")
