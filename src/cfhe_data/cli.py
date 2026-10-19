@@ -20,6 +20,23 @@ from .airtable_sync import (
     summarize_airtable_sync_plan,
     verify_airtable_sync_plan,
 )
+from .he_compliance import (
+    build_plan as build_he_compliance_plan,
+)
+from .he_compliance import (
+    fetch_compliance_source,
+    parse_compliance_csv,
+    require_complete,
+    require_eligible,
+    summarize_plan,
+    verify_plan_unchanged,
+)
+from .he_compliance import (
+    fetch_snapshot as fetch_he_compliance_snapshot,
+)
+from .he_compliance import (
+    plan_record_updates as he_compliance_record_updates,
+)
 from .pipeline import build_airtable_artifacts, build_artifacts
 from .source import fetch_source, load_specs, stable_manifest
 from .webflow import build_change_plan, verify_change_plan
@@ -349,6 +366,61 @@ def _airtable_sync(args: argparse.Namespace) -> int:
     return 0
 
 
+def _he_compliance_sync(args: argparse.Namespace) -> int:
+    token = os.environ.get("AIRTABLE_TOKEN", "")
+    if not token:
+        raise AirtableSyncBlockedError(
+            "AIRTABLE_TOKEN is required and must be supplied through the environment"
+        )
+    config = _read_object(args.config, "HE compliance config")
+    if args.source_csv is not None:
+        data = args.source_csv.read_bytes()
+        manifest: dict[str, object] = {"path": str(args.source_csv)}
+    else:
+        data, manifest = fetch_compliance_source(config["source"])
+    rows = parse_compliance_csv(data, compliance_values=config["compliance_values"])
+
+    def plan_now() -> tuple[dict[str, object], object]:
+        snapshot, client = fetch_he_compliance_snapshot(token=token, config=config)
+        plan = build_he_compliance_plan(
+            source_rows=rows,
+            source_manifest=manifest,
+            snapshot=snapshot,
+            config=config,
+        )
+        return plan, client
+
+    plan, _client = plan_now()
+    if args.plan_output is not None:
+        _write_json(args.plan_output, plan)
+    if not args.apply:
+        print(json.dumps({"mode": "dry_run", **summarize_plan(plan)}, indent=2))
+        return 0
+    require_eligible(plan)
+    fresh_plan, client = plan_now()
+    verify_plan_unchanged(plan, fresh_plan)
+    result = client.update_records(
+        he_compliance_record_updates(fresh_plan, config), verify_schema=False
+    )
+    final_plan, _client = plan_now()
+    require_eligible(final_plan)
+    require_complete(final_plan)
+    print(
+        json.dumps(
+            {
+                "mode": "applied",
+                **summarize_plan(plan),
+                "updated_count": result["updated_record_count"],
+                "already_current_count": result["already_current_record_count"],
+                "verified_count": result["verified_record_count"],
+                "readback_change_count": final_plan["change_count"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cfhe-data",
@@ -482,6 +554,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Apply an eligible plan; without this flag the command is read only",
     )
     airtable_sync.set_defaults(handler=_airtable_sync)
+
+    he_compliance = subparsers.add_parser(
+        "he-compliance-sync",
+        help="Sync HCD housing element compliance to the current RHNA & HE rows",
+    )
+    he_compliance.add_argument(
+        "--config", type=Path, default=Path("config/he_compliance_sync.json")
+    )
+    he_compliance.add_argument(
+        "--source-csv",
+        type=Path,
+        help="Use a downloaded HCD CSV instead of fetching the pinned resource",
+    )
+    he_compliance.add_argument("--plan-output", type=Path)
+    he_compliance.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply an eligible plan; without this flag the command is read only",
+    )
+    he_compliance.set_defaults(handler=_he_compliance_sync)
     return parser
 
 

@@ -112,12 +112,17 @@ The GitHub job runs after CI on a push to `master` or an explicit automation dis
 
 The older `airtable-plan` command remains available for offline comparisons from supplied snapshots. Local snapshots and plans belong under ignored `data/airtable/` because they contain Airtable record IDs.
 
+## Housing element compliance
+
+`cfhe-data he-compliance-sync` copies HCD's weekly Housing Element Compliance Report into `HE Compliance` and `Review Date` on each current RHNA & HE record, which drives the public Builder's Remedy view. It runs daily after permit publication. Without `--apply` it is read only. See the [Airtable operations guide](docs/airtable.md#housing-element-compliance).
+
 ## Official sources
 
 - [HCD APR dashboard and downloads](https://www.hcd.ca.gov/housing-open-data-tools/apr-dashboard)
 - [California Open Data APR dataset](https://data.ca.gov/dataset/housing-element-annual-progress-report-apr-data-by-jurisdiction-and-year)
 - Table A2 resource `fe505d9b-8c36-42ba-ba30-08bc4f34e022`
 - Sixth cycle RHNA resource `1e80a9cf-724c-432d-8374-e9708a6a92dc`
+- [Housing Element Compliance Report](https://data.ca.gov/dataset/housing-element-compliance-report) resource `2dcd1cd4-1348-4fc5-9c9c-219f82daac00`
 
 HCD describes the records as jurisdiction reported data that it generally does not independently verify. HCD also states that the previous calendar year remains incomplete until June 30.
 

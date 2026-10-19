@@ -83,3 +83,14 @@ jobs:
             --cycle-policy config/airtable_cycles.json \
             --git-sha "$GITHUB_SHA" \
             --apply
+      - name: Sync HCD housing element compliance to Airtable
+        if: ${{ !cancelled() }}
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+        shell: bash
+        run: |
+          git fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          test "$(git rev-parse origin/master)" = "$GITHUB_SHA"
+          cfhe-data he-compliance-sync \
+            --config config/he_compliance_sync.json \
+            --apply
