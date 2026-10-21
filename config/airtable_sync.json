@@ -1,5 +1,5 @@
 {
-  "config_version": 2,
+  "config_version": 3,
   "base_id": "appjwA9nMuNRewKNo",
   "jurisdictions_table_id": "tblMHCufKHzpCWPFJ",
   "rhna_table_id": "tblOiiBUHLapyf25e",
@@ -31,7 +31,11 @@
     "total_progress_override": "fld9HQz1i9DipXRht",
     "apr_data_through": "fldogLIo5uGMV8v20",
     "apr_planning_start": "fld23n42g581yvaX4",
-    "apr_planning_end": "fldFAqjPpDkW26Daz"
+    "apr_planning_end": "fldFAqjPpDkW26Daz",
+    "entitlement_vli": "fldXgmMgssSNiiVRA",
+    "entitlement_li": "fld3g9uec8dMW8dk3",
+    "entitlement_mi": "fld0n6rdOmk6qHktR",
+    "entitlement_ami": "fld4Rp6GD0nP3mVfk"
   },
   "rhna_field_options_sha256": {
     "jurisdiction_link": "e2c559df6dd5a15b31f49c60cdaed84a7d7fc900e624509388a3177fd2f4a16f",
@@ -49,6 +53,10 @@
     "total_progress_override": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
     "apr_data_through": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9",
     "apr_planning_start": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9",
-    "apr_planning_end": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9"
+    "apr_planning_end": "a60602a29887ad3dbe3559e7f62a42058ec7790dc3b0e0e5489f3806458f28c9",
+    "entitlement_vli": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "entitlement_li": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "entitlement_mi": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528",
+    "entitlement_ami": "ea868aa1e5e28ab6bf9becdcd947afb1b8e97c6ffa8503af8f8135e88090a528"
   }
 }

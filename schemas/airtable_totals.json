@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "CFHE current-cycle Airtable permit totals",
+  "title": "CFHE current-cycle Airtable permit and entitlement totals",
   "type": "object",
   "additionalProperties": false,
   "required": ["metadata", "jurisdictions"],
@@ -23,7 +23,13 @@
         "retained_row_count",
         "removed_row_count",
         "removed_units",
-        "undated_permits"
+        "undated_permits",
+        "entitlement_selected_row_count",
+        "entitlement_selected_units",
+        "entitlement_retained_row_count",
+        "entitlement_removed_row_count",
+        "entitlement_removed_units",
+        "undated_entitlements"
       ],
       "properties": {
         "cutoff_year": {"type": "integer", "minimum": 1900, "maximum": 3000},
@@ -48,7 +54,13 @@
         "retained_row_count": {"type": "integer", "minimum": 0},
         "removed_row_count": {"type": "integer", "minimum": 0},
         "removed_units": {"type": "integer", "minimum": 0},
-        "undated_permits": {"type": "integer", "minimum": 0}
+        "undated_permits": {"type": "integer", "minimum": 0},
+        "entitlement_selected_row_count": {"type": "integer", "minimum": 0},
+        "entitlement_selected_units": {"type": "integer", "minimum": 0},
+        "entitlement_retained_row_count": {"type": "integer", "minimum": 0},
+        "entitlement_removed_row_count": {"type": "integer", "minimum": 0},
+        "entitlement_removed_units": {"type": "integer", "minimum": 0},
+        "undated_entitlements": {"type": "integer", "minimum": 0}
       }
     },
     "jurisdictions": {
@@ -71,7 +83,16 @@
           "total",
           "undated_permits",
           "last_updated",
-          "data_status"
+          "data_status",
+          "entitlement_acutely_low",
+          "entitlement_extremely_low",
+          "entitlement_very_low",
+          "entitlement_low",
+          "entitlement_moderate",
+          "entitlement_above_moderate",
+          "entitlement_total",
+          "undated_entitlements",
+          "entitlement_data_status"
         ],
         "properties": {
           "jurisdiction": {"type": "string", "minLength": 1},
@@ -88,7 +109,16 @@
           "total": {"type": "integer", "minimum": 0},
           "undated_permits": {"type": "integer", "minimum": 0},
           "last_updated": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
-          "data_status": {"enum": ["reported", "no_selected_rows"]}
+          "data_status": {"enum": ["reported", "no_selected_rows"]},
+          "entitlement_acutely_low": {"type": "integer", "minimum": 0},
+          "entitlement_extremely_low": {"type": "integer", "minimum": 0},
+          "entitlement_very_low": {"type": "integer", "minimum": 0},
+          "entitlement_low": {"type": "integer", "minimum": 0},
+          "entitlement_moderate": {"type": "integer", "minimum": 0},
+          "entitlement_above_moderate": {"type": "integer", "minimum": 0},
+          "entitlement_total": {"type": "integer", "minimum": 0},
+          "undated_entitlements": {"type": "integer", "minimum": 0},
+          "entitlement_data_status": {"enum": ["reported", "no_selected_rows"]}
         }
       }
     }

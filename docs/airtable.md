@@ -15,7 +15,7 @@ validated automation pull request merged to master
 protected GitHub Actions job
     |
     v
-four existing Airtable permit fields and their APR reporting/planning dates
+existing Airtable permit fields, APR reporting/planning dates, and entitlement fields
 ```
 
 ## Data ownership
@@ -28,6 +28,15 @@ HCD data processed in GitHub controls the permit bands:
 - Airtable AMI = above moderate
 
 Undated permits are already included in those bands and are never added again. Config version 2 also manages `APR Data Through`, `APR Planning Period Start`, and `APR Planning Period End`. These are date fields tied to the same source artifact: December 31 of `cutoff_year`, `period_start`, and `period_end`. The publication code leaves existing RHNA and HE date lookups unchanged. Config version 1 retains the original permit-only behavior.
+
+Config version 3 manages everything version 2 manages and adds the entitlement fields below, from the Table A2 entitlement columns, counted over the same period and deduplicated by the permit rules plus one pass for entitlements that a later APR carried forward under a new tracking ID (see [methodology](methodology.md#entitlements)):
+
+- `🔍 Total VLI Entitlements` = acutely low + extremely low + very low
+- `🔍 Total LI Entitlements` = low
+- `🔍 Total MI Entitlements` = moderate
+- `🔍 Total AMI Entitlements` = above moderate
+
+Entitlements are not RHNA progress. They must never be added to permits, and they never feed Total Progress, the pace formulas, the progress override check, or any other RHNA progress figure. The sync overwrites all four fields from the reviewed source, so a hand edit to a blank or a nonnegative whole number is replaced on the next run. A negative, fractional, or nonnumeric value in any of these fields, or in a permit field, on any RHNA row stops publication before any write, and someone must correct it by hand. A jurisdiction with no retained entitlement rows receives 0 in each field, not a blank. Undated entitlements are already included in the bands.
 
 The publication artifact is `data/processed/airtable_totals.json`. It declares one target cycle and one HCD counting period per jurisdiction. The default is the official sixth-cycle period. `config/airtable_cycles.json` replaces that period for the 17 jurisdictions now in the seventh cycle. Airtable dates are not used as counting windows.
 
@@ -78,13 +87,23 @@ The GitHub job adds `--apply`. The plan is eligible only when:
 - Airtable has not changed since the plan was built; and
 - the running Git commit is still the head of `master`.
 
-Before each batch, the client reads every target record again. It sends at most ten existing-record updates and includes only changed permit fields and, under config version 2, changed APR dates. It then reads every updated record back. A value that matches neither the reviewed old value nor the desired new value stops the batch. A rerun after an interrupted request safely accepts records that already contain the desired values.
+A blocker holds back the whole plan. Under config version 3 that includes the entitlement fields, even though entitlements never affect progress.
+
+Before each batch, the client reads every target record again. It sends at most ten updates to existing records and includes only changed permit fields, changed APR dates under config version 2 or 3, and changed entitlement fields under config version 3. It then reads every updated record back. A value that matches neither the reviewed old value nor the desired new value stops the batch. A rerun after an interrupted request safely accepts records that already contain the desired values.
 
 After all batches, the command fetches the entire snapshot again and requires zero remaining changes and exact statewide aggregates.
 
-Only after that complete readback succeeds, the command writes the same UTC timestamp to `Last APR Verified` for all 539 matched current records. This field therefore means the jurisdiction was checked against the reviewed HCD source, even when its permit figures were already correct. `Last APR Update` remains the separate Airtable timestamp for an actual target or permit value change.
+Only after that complete readback succeeds, the command writes the same UTC timestamp to `Last APR Verified` for all 539 matched current records. This field therefore means the jurisdiction was checked against the reviewed HCD source, even when its permit figures were already correct. Under config version 3 it also certifies the four entitlement fields. `Last APR Update` remains the separate Airtable timestamp for an actual target or permit value change.
 
-The client has no create, delete, upsert, relink, or schema mutation method. Date-field creation and pace-formula migration are separate one-time setup. The ordinary automation still needs no schema-write permission. See [pace correction](pace-correction.md) for the formula behavior and before/after review.
+The client has no create, delete, upsert, relink, or schema mutation method. Creating the date and entitlement fields and migrating the pace formulas are separate one-time setup. The ordinary automation still needs no permission to write schema. See [pace correction](pace-correction.md) for the formula behavior and before/after review.
+
+## Config version 3 rollout
+
+The four entitlement fields were created by hand in the RHNA & HE table as number fields with precision 0. Version 3 pins them the way it pins the permit fields. Read the schema, add each field ID to `rhna_fields` under `entitlement_vli`, `entitlement_li`, `entitlement_mi`, and `entitlement_ami`, add each field's option digest to `rhna_field_options_sha256` under the same names, and set `config_version` to 3. A number field with precision 0 has the same option digest as the permit bands. A missing ID or digest stops the config from loading, and a later change of field type or precision stops publication.
+
+Version 3 requires the entitlement fields in `airtable_totals.json` and validates them: every value is a nonnegative integer, the six categories sum to `entitlement_total` on each row, and the metadata counts reconcile with the rows. Versions 1 and 2 still reject an artifact that carries those fields, and otherwise build the same plans, digests, and summaries as before. CI publishes on every push to `master`, and a pipeline change that reaches `master` starts a refresh that regenerates the artifact. The pipeline change, the regenerated artifact, and the version 3 config must therefore reach `master` in the same merge. `tests/test_airtable_sync.py` runs the committed config against the committed artifact, and the refresh runs the tests on the artifact it has just built, so a pair that disagrees fails CI or the refresh before it can merge. If one reaches `master` anyway, publication stops before any record write.
+
+Under version 3 the plan reports `airtable_entitlement_aggregate_before` and `source_entitlement_aggregate_after` separately from the permit aggregates, and the printed summary adds `source_entitlement_total` beside `source_total`. `pace-review` and `table-b-review` accept an artifact with or without the entitlement fields. They validate the fields when present and reject a partial set, but neither review uses them.
 
 ## GitHub controls
 

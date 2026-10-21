@@ -1,0 +1,288 @@
+{
+  "invariants": {
+    "category_conservation": true,
+    "cycle_counts_reconcile": true,
+    "jurisdiction_aggregation_reconciles": true,
+    "permit_projection_unchanged": true,
+    "row_conservation": true
+  },
+  "metadata": {
+    "complete_after": "2026-06-30",
+    "cutoff_year": 2025,
+    "cycle_counts": {
+      "6th": 522,
+      "7th": 17
+    },
+    "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
+    "dedupe_profile": "audited-apr-snapshots-v3",
+    "entitlement_removed_row_count": 7877,
+    "entitlement_removed_units": 28864,
+    "entitlement_retained_row_count": 71074,
+    "entitlement_selected_row_count": 78951,
+    "entitlement_selected_units": 499158,
+    "jurisdiction_count": 539,
+    "last_updated": "2026-10-16",
+    "provisional": false,
+    "removed_row_count": 32219,
+    "removed_units": 59697,
+    "retained_row_count": 279086,
+    "selected_row_count": 311305,
+    "selected_units": 557387,
+    "source_manifest_sha256": "9a13e5c7cb8952010080b696ba5332edd06276b03e0df31eb53550c06754f297",
+    "undated_entitlements": 0,
+    "undated_permits": 46
+  },
+  "removed_by_rule": {
+    "entitlement_carried_forward_snapshot": {
+      "categories": {
+        "above_moderate": 2183,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 381,
+        "moderate": 129,
+        "very_low": 450
+      },
+      "rows": 682,
+      "units": 3143
+    },
+    "strong_aggregate_exception": {
+      "categories": {
+        "above_moderate": 1,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 12,
+        "moderate": 0,
+        "very_low": 89
+      },
+      "rows": 1,
+      "units": 102
+    },
+    "strong_linked_snapshot": {
+      "categories": {
+        "above_moderate": 16275,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 4277,
+        "moderate": 1816,
+        "very_low": 2006
+      },
+      "rows": 6627,
+      "units": 24374
+    },
+    "strong_reliable_snapshot": {
+      "categories": {
+        "above_moderate": 631,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 7,
+        "moderate": 3,
+        "very_low": 21
+      },
+      "rows": 87,
+      "units": 662
+    },
+    "strong_reused_id_exception": {
+      "categories": {
+        "above_moderate": 1,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 0,
+        "moderate": 0,
+        "very_low": 0
+      },
+      "rows": 1,
+      "units": 1
+    },
+    "strong_split_increment": {
+      "categories": {
+        "above_moderate": 29,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 1,
+        "moderate": 2,
+        "very_low": 0
+      },
+      "rows": 31,
+      "units": 32
+    },
+    "weak_dual_location_snapshot": {
+      "categories": {
+        "above_moderate": 3,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 4,
+        "moderate": 0,
+        "very_low": 0
+      },
+      "rows": 7,
+      "units": 7
+    },
+    "weak_literal_snapshot": {
+      "categories": {
+        "above_moderate": 244,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 3,
+        "moderate": 8,
+        "very_low": 0
+      },
+      "rows": 154,
+      "units": 255
+    },
+    "weak_project_and_dual_location_snapshot": {
+      "categories": {
+        "above_moderate": 271,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 0,
+        "moderate": 17,
+        "very_low": 0
+      },
+      "rows": 287,
+      "units": 288
+    }
+  },
+  "removed_categories": {
+    "above_moderate": 19638,
+    "acutely_low": 0,
+    "extremely_low": 0,
+    "low": 4685,
+    "moderate": 1975,
+    "very_low": 2566
+  },
+  "retained_categories": {
+    "above_moderate": 322203,
+    "acutely_low": 499,
+    "extremely_low": 3788,
+    "low": 77573,
+    "moderate": 38379,
+    "very_low": 27852
+  },
+  "selected_categories": {
+    "above_moderate": 341841,
+    "acutely_low": 499,
+    "extremely_low": 3788,
+    "low": 82258,
+    "moderate": 40354,
+    "very_low": 30418
+  },
+  "selection": {
+    "max_report_year": 2025,
+    "planning_periods_without_selected_rows": [
+      "ALTURAS",
+      "AMADOR",
+      "ARVIN",
+      "ATWATER",
+      "AUBURN",
+      "BANNING",
+      "BELL",
+      "BENICIA",
+      "BIG BEAR LAKE",
+      "CALIFORNIA CITY",
+      "CLOVERDALE",
+      "DINUBA",
+      "DORRIS",
+      "DOS PALOS",
+      "DUNSMUIR",
+      "ETNA",
+      "FIREBAUGH",
+      "FORT JONES",
+      "FOSTER CITY",
+      "FOUNTAIN VALLEY",
+      "FOWLER",
+      "GLENN COUNTY",
+      "GUSTINE",
+      "HANFORD",
+      "HIDDEN HILLS",
+      "HUGHSON",
+      "HUNTINGTON BEACH",
+      "INDIAN WELLS",
+      "INDUSTRY",
+      "IRWINDALE",
+      "ISLETON",
+      "KERN COUNTY",
+      "KINGS COUNTY",
+      "KINGSBURG",
+      "LAGUNA WOODS",
+      "LEMOORE",
+      "LOS BANOS",
+      "LOYALTON",
+      "MADERA",
+      "MADERA COUNTY",
+      "MARIPOSA COUNTY",
+      "MODOC COUNTY",
+      "MONTAGUE",
+      "NAPA COUNTY",
+      "OAKDALE",
+      "ORANGE COUNTY",
+      "OROVILLE",
+      "PARLIER",
+      "PATTERSON",
+      "PLYMOUTH",
+      "PORTOLA",
+      "RIO VISTA",
+      "SAN BENITO COUNTY",
+      "SAN JOAQUIN",
+      "SAND CITY",
+      "SARATOGA",
+      "SHAFTER",
+      "SHASTA LAKE",
+      "SIERRA COUNTY",
+      "SIMI VALLEY",
+      "SISKIYOU COUNTY",
+      "SOLANO COUNTY",
+      "SOLEDAD",
+      "STANISLAUS COUNTY",
+      "SUISUN CITY",
+      "TAFT",
+      "TEHACHAPI",
+      "TEHAMA",
+      "TRINITY COUNTY",
+      "TULELAKE",
+      "TUOLUMNE COUNTY",
+      "TURLOCK",
+      "UNION CITY",
+      "VERNON",
+      "WASCO",
+      "WEED",
+      "WEST SACRAMENTO",
+      "WOODLAKE",
+      "YOLO COUNTY"
+    ],
+    "raw_jurisdiction_count": 534,
+    "raw_jurisdictions_without_planning_period": [],
+    "raw_row_count": 924139,
+    "reported_total_mismatch_rows": 0,
+    "reported_total_net_difference": 0,
+    "selected_row_count": 78951
+  },
+  "source_columns": {
+    "categories": {
+      "above_moderate": [
+        "ABOVE_MOD_INCOME"
+      ],
+      "acutely_low": [
+        "ACUTELY_LOW_INCOME_DR",
+        "ACUTELY_LOW_INCOME_NDR"
+      ],
+      "extremely_low": [
+        "EXTREMELY_LOW_INCOME_DR",
+        "EXTREMELY_LOW_INCOME_NDR"
+      ],
+      "low": [
+        "LOW_INCOME_DR",
+        "LOW_INCOME_NDR"
+      ],
+      "moderate": [
+        "MOD_INCOME_DR",
+        "MOD_INCOME_NDR"
+      ],
+      "very_low": [
+        "VLOW_INCOME_DR",
+        "VLOW_INCOME_NDR"
+      ]
+    },
+    "date": "ENT_APPROVE_DT1",
+    "total": "NO_ENTITLEMENTS"
+  }
+}

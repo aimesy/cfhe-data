@@ -25,12 +25,13 @@ HCD APR Table A2 + official planning periods
 
 - `data/processed/jurisdiction_totals.csv`, with one row per sixth cycle jurisdiction
 - `data/processed/jurisdiction_totals.json`, the canonical input for a future Webflow update
-- `data/processed/airtable_totals.json`, the cycle-aware input for Airtable, with 522 sixth-cycle and 17 seventh-cycle jurisdictions
+- `data/processed/airtable_totals.json`, the input for Airtable, which declares each jurisdiction’s cycle and gives permit and entitlement counts for 522 sixth cycle and 17 seventh cycle jurisdictions
 - `data/processed/source_manifest.json`, with source URLs, resource identifiers, hashes, byte counts, catalog metadata, and DataStore checks
 - `data/processed/audit_summary.json`, with selection totals, removal rules, and conservation checks
 - `data/processed/airtable_audit_summary.json`, with the same checks and removal-rule breakdown applied to the mixed current-cycle scope
-- `data/run/dedupe_decisions.jsonl`, a complete local decision ledger excluded from Git and GitHub Actions artifacts
-- `data/run/dedupe_review.jsonl` and `data/run/airtable_dedupe_review.jsonl`, compact review ledgers containing every removal plus its directly matched and final referenced rows; these are attached to refresh workflow runs but never committed
+- `data/processed/airtable_entitlement_audit_summary.json`, with the Table A2 entitlement columns used and the same selection totals, removal rules, and conservation checks applied to entitlements in the Airtable scope
+- `data/run/dedupe_decisions.jsonl`, `data/run/airtable_dedupe_decisions.jsonl`, and `data/run/airtable_entitlement_decisions.jsonl`, complete local decision ledgers excluded from Git and GitHub Actions artifacts
+- `data/run/dedupe_review.jsonl`, `data/run/airtable_dedupe_review.jsonl`, and `data/run/airtable_entitlement_review.jsonl`, compact review ledgers containing every removal plus its directly matched and final referenced rows; these are attached to refresh workflow runs but never committed
 
 The CSV uses the requested labels `Undated Permits` and `Last Updated`. County names use `(Unincorporated)`.
 
@@ -76,17 +77,19 @@ The source contains annual snapshots. For dated rows with a substantive jurisdic
 
 Rows with weak identifiers require an exact raw fingerprint, except for `YEAR`, or one of the separately audited residual predicates. Same year multiplicity is always preserved. Ambiguous rows remain. The HCD dashboard total is not a target.
 
+Entitlements take one more pass that permits never take. It links rows from different APR years by approval date, income bands, entitlement count, and a shared APN, a compatible address, or a repeated building permit, ignores the tracking identifier except to keep sibling permits on one parcel apart, and keeps the latest APR year’s rows. See [methodology](docs/methodology.md).
+
 See [methodology](docs/methodology.md), [provenance](docs/provenance.md), and [operations](docs/operations.md).
 
 ## Planning-period pace
 
 The permit counter uses each jurisdiction’s HCD planning-period start and end. Config version 2 of the Airtable publisher also maintains `APR Data Through`, `APR Planning Period Start`, and `APR Planning Period End`. The reporting cutoff is December 31 of the source year, not the refresh date. Pace is RHNA multiplied by the elapsed fraction of that planning period, capped at the period boundaries. Equality qualifies as on target.
 
-`cfhe-data pace-review --schema <schema.json> --snapshot <snapshot.json>` prepares a complete offline comparison with unchanged counts, proposed metadata updates, and exact formula replacements. Snapshots and plans contain record IDs and belong under ignored `data/airtable/`. See [the pace correction](docs/pace-correction.md).
+`cfhe-data pace-review --schema <schema.json> --snapshot <snapshot.json>` prepares a complete offline comparison with unchanged counts, proposed metadata updates, and exact formula replacements. Pace counts and formulas use permits only; entitlement fields in the totals are validated when present, and their metadata and the artifact digest carry through to the review. Snapshots and plans contain record IDs and belong under ignored `data/airtable/`. See [the pace correction](docs/pace-correction.md).
 
 ## Table B counter review
 
-The production artifacts above still count Table A2 permits from the planning-period start. They do not yet include all projection-period credit. A separate `table-b-review` command checks submitted Table B sources against those artifacts and calculates pace at the APR reporting cutoff. It never writes to Airtable or substitutes missing reports with zero.
+The production artifacts above still count Table A2 permits from the start of the planning period. They do not yet include all credit for the projection period. A separate `table-b-review` command checks submitted Table B sources against those artifacts and calculates pace at the APR reporting cutoff. It never writes to Airtable or substitutes missing reports with zero. It compares permits only and accepts artifacts with or without entitlement fields.
 
 The initial source manifest covers Los Angeles, Petaluma, and South San Francisco. Source files must match the URLs and SHA-256 digests in `config/table_b_sources_2025.json` and remain under ignored `data/raw/`.
 
@@ -104,9 +107,9 @@ An eventual Webflow apply workflow requires a protected GitHub Environment, a We
 
 ## Airtable publication
 
-`cfhe-data airtable-sync` is the production GitHub-to-Airtable path. It fetches the complete base and schema, maps every source jurisdiction through its canonical key and the Airtable unincorporated flag, and selects the declared sixth or seventh cycle row. Config version 1 manages VLI, LI, MI, and AMI permits. Version 2 additionally manages the APR reporting cutoff and planning dates.
+`cfhe-data airtable-sync` is the production path from GitHub to Airtable. It fetches the complete base and schema, maps every source jurisdiction through its canonical key and the Airtable unincorporated flag, and selects the declared sixth or seventh cycle row. Config version 1 manages VLI, LI, MI, and AMI permits. Version 2 additionally manages the APR reporting cutoff and planning dates. Version 3 additionally overwrites `🔍 Total VLI Entitlements`, `🔍 Total LI Entitlements`, `🔍 Total MI Entitlements`, and `🔍 Total AMI Entitlements` with Table A2 entitlement counts. Entitlements are not RHNA progress, are never added to permits, and never feed Total Progress or pace.
 
-Without `--apply`, the command is read only. With `--apply`, it will proceed only when the source is complete, all 539 targets are unique and current, the schema still matches the pinned field IDs and types, and no Airtable progress override supersedes the permit fields. It rechecks values before each batch of ten, uses conditional updates, and verifies every record after writing. It never creates, deletes, upserts, relinks, or changes Airtable schema.
+Without `--apply`, the command is read only. With `--apply`, it will proceed only when the source is complete, all 539 targets are unique and current, the schema still matches the pinned field IDs and types, and no Airtable progress override supersedes the permit fields. A blocker holds back every field in the plan, entitlements included. It rechecks values before each batch of ten, uses conditional updates, and verifies every record after writing. It never creates, deletes, upserts, relinks, or changes Airtable schema.
 
 The GitHub job runs after CI on a push to `master` or an explicit automation dispatch bound to `master`, through the protected `airtable-production` environment. The PAT is limited to this base and is stored only as the `AIRTABLE_TOKEN` environment secret. See the [Airtable operations guide](docs/airtable.md).
 

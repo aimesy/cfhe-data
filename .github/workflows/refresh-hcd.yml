@@ -91,8 +91,10 @@ jobs:
           path: |
             data/run/dedupe_review.jsonl
             data/run/airtable_dedupe_review.jsonl
+            data/run/airtable_entitlement_review.jsonl
             data/processed/audit_summary.json
             data/processed/airtable_audit_summary.json
+            data/processed/airtable_entitlement_audit_summary.json
           if-no-files-found: error
           compression-level: 9
           retention-days: 90
@@ -125,6 +127,7 @@ jobs:
             data/processed/audit_summary.json \
             data/processed/airtable_totals.json \
             data/processed/airtable_audit_summary.json \
+            data/processed/airtable_entitlement_audit_summary.json \
             data/processed/refresh_heartbeat.json
           git commit -m "Refresh HCD APR data"
           head_sha="$(git rev-parse HEAD)"

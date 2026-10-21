@@ -26,6 +26,17 @@ DEFAULT_CATEGORY_FIELDS: tuple[tuple[str, ...], ...] = (
     ("BP_MOD_INCOME_DR", "BP_MOD_INCOME_NDR"),
     ("BP_ABOVE_MOD_INCOME",),
 )
+# Completed entitlements use Table A2's unprefixed income columns. The bands
+# are exclusive and reconcile to NO_ENTITLEMENTS; EXTR_LOW_INCOME_UNITS is
+# never added to them.
+ENTITLEMENT_CATEGORY_FIELDS: tuple[tuple[str, ...], ...] = (
+    ("ACUTELY_LOW_INCOME_DR", "ACUTELY_LOW_INCOME_NDR"),
+    ("EXTREMELY_LOW_INCOME_DR", "EXTREMELY_LOW_INCOME_NDR"),
+    ("VLOW_INCOME_DR", "VLOW_INCOME_NDR"),
+    ("LOW_INCOME_DR", "LOW_INCOME_NDR"),
+    ("MOD_INCOME_DR", "MOD_INCOME_NDR"),
+    ("ABOVE_MOD_INCOME",),
+)
 
 
 @dataclass(frozen=True, slots=True)

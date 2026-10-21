@@ -17,6 +17,15 @@ def test_refresh_workflow_uploads_only_compact_review_evidence() -> None:
     assert "data/run/**" not in workflow
     assert "data/run/dedupe_decisions.jsonl" not in workflow
     assert "data/run/airtable_dedupe_decisions.jsonl" not in workflow
+    assert "data/run/airtable_entitlement_decisions.jsonl" not in workflow
+    upload = workflow.split("Upload deduplication review evidence", 1)[1].split(
+        "Detect changes", 1
+    )[0]
+    assert "data/run/airtable_entitlement_review.jsonl" in upload
+    assert "data/processed/airtable_entitlement_audit_summary.json" in upload
+    committed = workflow.split("git add -- \\", 1)[1].split("git commit", 1)[0]
+    assert "data/processed/airtable_entitlement_audit_summary.json" in committed
+    assert "data/run/" not in committed
     assert "Compact decision ledgers" in workflow
     assert "GITHUB_SERVER_URL" in workflow
     assert 'cron: "37 15 * * *"' in workflow
@@ -38,6 +47,19 @@ def test_refresh_workflow_uploads_only_compact_review_evidence() -> None:
     assert "Select-Object" not in workflow
     assert "AIRTABLE_TOKEN" not in workflow
     assert "airtable-apply" not in workflow
+
+
+def test_refresh_runs_the_tests_on_the_artifacts_it_built() -> None:
+    workflow = (REPOSITORY_ROOT / ".github/workflows/refresh-hcd.yml").read_text(
+        encoding="utf-8"
+    )
+
+    build, rest = workflow.split("- name: Verify", 1)
+    verify, publish = rest.split("- name: Publish the refresh branch", 1)
+    assert "cfhe-data refresh" in build
+    assert "python -m pytest -q" in verify
+    assert "git add" not in build + verify
+    assert "git add" in publish
 
 
 def test_airtable_publication_runs_only_after_ci_on_master() -> None:

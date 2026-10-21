@@ -72,7 +72,8 @@ def build_table_b_review(
         manifest.get("sources"), list
     ):
         raise ValueError("Expected Table B manifest version 1 and sources array")
-    metadata, old_rows = _validate_source(baseline)
+    # Entitlements may be present and are validated, but Table B compares permits.
+    metadata, old_rows = _validate_source(baseline, entitlements=None)
     if not old_rows or len(old_rows) != cycle_policy.get("expected_jurisdiction_count"):
         raise ValueError(
             "Baseline does not have the complete expected jurisdiction coverage"

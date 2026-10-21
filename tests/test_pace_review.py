@@ -6,8 +6,10 @@ visibility: public
 import copy
 
 import pytest
+from test_airtable_sync import _add_entitlements
 
 from cfhe_data import pace_review as p
+from cfhe_data.airtable_sync import ENTITLEMENT_METADATA_FIELDS
 from cfhe_data.webflow import canonical_sha256
 
 
@@ -397,4 +399,25 @@ def test_unreliable_evidence_cannot_create_a_pace_plan(inputs, change):
     else:
         del f[p.PERMITS["vli"]]
     with pytest.raises(ValueError):
+        p.build_pace_review(**inputs)
+
+
+def test_entitlement_fields_do_not_change_the_pace_review(inputs):
+    digests = {"source_totals_sha256", "baseline_totals_sha256"}
+    plain = p.build_pace_review(**copy.deepcopy(inputs))
+    baseline = copy.deepcopy(inputs["totals"])
+    _add_entitlements(inputs["totals"])
+    for result in (
+        p.build_pace_review(**inputs),
+        p.build_pace_review(**inputs, baseline_totals=baseline),
+    ):
+        # The artifact metadata is echoed as provenance; nothing else may differ.
+        for name in ("source_metadata", "baseline_metadata"):
+            for field in ENTITLEMENT_METADATA_FIELDS:
+                result[name].pop(field, None)
+        assert {k: v for k, v in result.items() if k not in digests} == {
+            k: v for k, v in plain.items() if k not in digests
+        }
+    del inputs["totals"]["jurisdictions"][1]["entitlement_total"]
+    with pytest.raises(ValueError, match="fields changed"):
         p.build_pace_review(**inputs)

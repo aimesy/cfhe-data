@@ -2,7 +2,7 @@
 
 ## Normal refresh
 
-The scheduled workflow runs daily and may also be started manually. A merge to `master` that changes the pipeline, configuration, tests, or either workflow also starts it immediately. It downloads complete HCD snapshots, validates them, rebuilds both the sixth-cycle comparison totals and mixed current-cycle Airtable totals, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with both audit summaries, for 90 days. A refresh pull request links the workflow run that contains them.
+The scheduled workflow runs daily and may also be started manually. A merge to `master` that changes the pipeline, configuration, tests, or either workflow also starts it immediately. It downloads complete HCD snapshots, validates them, rebuilds both the sixth cycle comparison totals and the Airtable totals for the mixed current cycles, and runs the tests. Raw source records and the complete decision ledgers remain on the temporary runner. The workflow uploads compact review ledgers containing every removal plus its directly matched and final referenced rows, along with the audit summaries, and keeps them for 90 days. The ledgers are `dedupe_review.jsonl`, `airtable_dedupe_review.jsonl`, and `airtable_entitlement_review.jsonl`, which holds the removals made when entitlements are deduplicated; the summaries are `audit_summary.json`, `airtable_audit_summary.json`, and `airtable_entitlement_audit_summary.json`. A refresh pull request links the workflow run that contains them.
 
 The uploaded CSV is preferred. If that endpoint is unavailable, the workflow may use the official DataStore dump. The fallback is accepted only when its synthetic `_id` field is the sole extra column, its remaining ordered fields match the pinned source header, and its logical record count matches the DataStore total.
 
@@ -58,13 +58,13 @@ The first Webflow implementation should create a change plan and compare current
 
 ## Airtable publication boundary
 
-GitHub owns the HCD calculation and review. Airtable remains the operational source for the tracker and its nonpermit fields. The publication job updates only the four permit bands on existing RHNA records.
+GitHub owns the HCD calculation and review. Airtable remains the operational source for the tracker and its nonpermit fields. The publication job updates only existing RHNA records: the four permit bands, the APR dates under config version 2 or 3, and the four Table A2 entitlement bands under config version 3, followed by `Last APR Verified` after a complete readback. Entitlements are not RHNA progress and must never be added to permits. The job overwrites the four entitlement fields from the reviewed source on every run.
 
 The mixed-cycle artifact declares the target cycle and HCD counting period for each jurisdiction. Airtable cycle dates are audit context only and are not used as HCD counting windows. Canonical jurisdiction keys plus Airtable's unincorporated checkbox provide the exact mapping. Display spelling is not used as a fuzzy key.
 
 The `airtable-production` GitHub Environment holds one secret, `AIRTABLE_TOKEN`. The token is restricted to the CFHE base and has only `data.records:read`, `data.records:write`, and `schema.bases:read`. No token belongs in the repository, an Actions log, or a saved plan.
 
-The publication job checks the exact Git commit, full schema, terminal pagination, unique jurisdiction coverage, cycle selection, current formula, Correct Link formula, progress overrides, source and snapshot digests, and field prevalues. Updates are sent in batches of no more than ten. Every batch is read immediately before and after the write. A safe rerun recognizes values already written by an interrupted prior run.
+The publication job checks the exact Git commit, full schema, terminal pagination, unique jurisdiction coverage, cycle selection, current formula, Correct Link formula, progress overrides, source and snapshot digests, and field prevalues. Under config version 3 it also requires entitlement categories that sum to each row's total and metadata that reconcile with the rows, and a blocker holds back the entitlement writes with the rest of the plan. Updates are sent in batches of no more than ten. Every batch is read immediately before and after the write. A safe rerun recognizes values already written by an interrupted prior run.
 
 The job never creates, deletes, upserts, relinks, or changes schema. A blocker or mismatch fails the job before the affected batch is sent.
 

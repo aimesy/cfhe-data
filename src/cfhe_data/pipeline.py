@@ -17,9 +17,10 @@ from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-from .dedupe import deduplicate
+from .dedupe import deduplicate, deduplicate_entitlements
 from .models import (
     DEFAULT_CATEGORY_FIELDS,
+    ENTITLEMENT_CATEGORY_FIELDS,
     DedupAuditEntry,
     DedupResult,
     PermitRecord,
@@ -90,6 +91,82 @@ SISKIYOU_CURRENT_PERIOD = (dt.date(2023, 2, 15), dt.date(2031, 2, 15))
 
 
 @dataclass(frozen=True, slots=True)
+class ActivitySpec:
+    """The Table A2 columns that date, total, and split one reported activity."""
+
+    date_field: str
+    total_field: str
+    category_fields: tuple[tuple[str, ...], ...]
+    # Entitlements take the dedupe pass that recognizes rows carried forward
+    # from earlier reports; permits and completions use the permit profile.
+    carried_pass: bool = False
+
+    @property
+    def fields(self) -> tuple[str, ...]:
+        return (
+            self.date_field,
+            self.total_field,
+            *(field for group in self.category_fields for field in group),
+        )
+
+
+PERMIT_ACTIVITY = ActivitySpec(
+    date_field="BP_ISSUE_DT1",
+    total_field="NO_BUILDING_PERMITS",
+    category_fields=DEFAULT_CATEGORY_FIELDS,
+)
+ENTITLEMENT_ACTIVITY = ActivitySpec(
+    date_field="ENT_APPROVE_DT1",
+    total_field="NO_ENTITLEMENTS",
+    category_fields=ENTITLEMENT_CATEGORY_FIELDS,
+    carried_pass=True,
+)
+# Completions (certificates of occupancy or other readiness) use Table A2's
+# CO_ income columns, which reconcile to NO_OTHER_FORMS_OF_READINESS.
+COMPLETION_ACTIVITY = ActivitySpec(
+    date_field="CO_ISSUE_DT1",
+    total_field="NO_OTHER_FORMS_OF_READINESS",
+    category_fields=(
+        ("CO_ACUTELY_LOW_INCOME_DR", "CO_ACUTELY_LOW_INCOME_NDR"),
+        ("CO_EXTREMELY_LOW_INCOME_DR", "CO_EXTREMELY_LOW_INCOME_NDR"),
+        ("CO_VLOW_INCOME_DR", "CO_VLOW_INCOME_NDR"),
+        ("CO_LOW_INCOME_DR", "CO_LOW_INCOME_NDR"),
+        ("CO_MOD_INCOME_DR", "CO_MOD_INCOME_NDR"),
+        ("CO_ABOVE_MOD_INCOME",),
+    ),
+)
+
+
+def deduplicate_activity(
+    activity: ActivitySpec, records: Sequence[PermitRecord]
+) -> DedupResult:
+    """Deduplicate one activity's records under that activity's profile."""
+
+    if activity.carried_pass:
+        return deduplicate_entitlements(
+            records,
+            corroboration=(PERMIT_ACTIVITY.date_field, PERMIT_ACTIVITY.total_field),
+        )
+    return deduplicate(records)
+
+
+ENTITLEMENT_METADATA_FIELDS = (
+    "entitlement_selected_row_count",
+    "entitlement_selected_units",
+    "entitlement_retained_row_count",
+    "entitlement_removed_row_count",
+    "entitlement_removed_units",
+    "undated_entitlements",
+)
+ENTITLEMENT_ROW_FIELDS = (
+    *(f"entitlement_{name}" for name in CATEGORY_NAMES),
+    "entitlement_total",
+    "undated_entitlements",
+    "entitlement_data_status",
+)
+
+
+@dataclass(frozen=True, slots=True)
 class PlanningPeriod:
     key: str
     display: str
@@ -123,6 +200,13 @@ class AirtableBuildArtifacts:
     retained_rows: int
     removed_rows: int
     total_units: int
+    entitlement_audit_summary: Path
+    entitlement_decision_ledger: Path
+    entitlement_review_ledger: Path
+    entitlement_selected_rows: int
+    entitlement_retained_rows: int
+    entitlement_removed_rows: int
+    entitlement_total_units: int
 
 
 def _display_jurisdiction(value: object) -> str:
@@ -186,35 +270,119 @@ def load_planning_periods(
     return periods
 
 
-def _strict_categories(row: Mapping[str, str], record_index: int) -> tuple[int, ...]:
+def _strict_categories(
+    row: Mapping[str, str],
+    record_index: int,
+    category_fields: tuple[tuple[str, ...], ...] = DEFAULT_CATEGORY_FIELDS,
+) -> tuple[int, ...]:
     return tuple(
         sum(
             parse_nonnegative_integer(row[field], field=field, record=record_index)
             for field in group
         )
-        for group in DEFAULT_CATEGORY_FIELDS
+        for group in category_fields
     )
 
 
-def select_permit_records(
+def _activity_record(
+    activity: ActivitySpec,
+    row: Mapping[str, str],
+    *,
+    record_index: int,
+    physical_line: int,
+    report_year: int,
+    jurisdiction: str,
+    period: PlanningPeriod,
+    effective_end: dt.date,
+    fingerprint_fields: Sequence[str],
+) -> PermitRecord | None:
+    """Return the row's record for one activity, or None when it is out of scope.
+
+    The activity date occupies the record's ``permit_date`` slot, so snapshot
+    deduplication blocks entitlement rows on their own approval date.
+    """
+
+    activity_date = parse_date(
+        row[activity.date_field],
+        field=activity.date_field,
+        record=record_index,
+    )
+    if activity_date is None:
+        included = period.start.year <= report_year <= effective_end.year
+    else:
+        included = period.start <= activity_date <= effective_end
+    if not included:
+        return None
+    categories = _strict_categories(row, record_index, activity.category_fields)
+    reported_total = parse_nonnegative_integer(
+        row[activity.total_field],
+        field=activity.total_field,
+        record=record_index,
+    )
+    if not (sum(categories) or reported_total):
+        return None
+    return PermitRecord.from_values(
+        source_record_index=record_index,
+        csv_physical_line=physical_line,
+        report_year=report_year,
+        jurisdiction=jurisdiction,
+        jurisdiction_display=period.display,
+        permit_date=activity_date,
+        tracking_id=row["JURS_TRACKING_ID"],
+        project_name=row["PROJECT_NAME"],
+        apn=row["APN"],
+        street_address=row["STREET_ADDRESS"],
+        standard_address=row["STD_ADDRESS"],
+        latitude=row["LATITUDE"],
+        longitude=row["LONGITUDE"],
+        categories=categories,
+        reported_total=reported_total,
+        unit_category=row["UNIT_CAT"],
+        tenure=row["TENURE"],
+        raw_row=row,
+        fingerprint_fields=fingerprint_fields,
+    )
+
+
+def select_activity_records(
     path: Path,
     contract: CsvContract,
     periods: Mapping[str, PlanningPeriod],
     cutoff_year: int,
-) -> tuple[tuple[PermitRecord, ...], dict[str, object]]:
+    activities: Sequence[ActivitySpec],
+    report_year_counts: Counter[tuple[str, int]] | None = None,
+) -> tuple[tuple[tuple[PermitRecord, ...], dict[str, object]], ...]:
+    """Select every activity's rows in one pass over Table A2.
+
+    Each activity gets the same planning period window and its own records,
+    statistics, and reconciliation check, in the order the activities are given.
+    When ``report_year_counts`` is given, it also counts every raw row by
+    jurisdiction key and report year, selected or not.
+    """
+
     if cutoff_year < 2018:
         raise ValueError("cutoff_year must be 2018 or later")
+    if not activities:
+        raise ValueError("At least one Table A2 activity is required")
     cutoff_date = dt.date(cutoff_year, 12, 31)
-    records: list[PermitRecord] = []
+    records: list[list[PermitRecord]] = [[] for _ in activities]
+    selected_by_jurisdiction: list[Counter[str]] = [Counter() for _ in activities]
+    mismatch_rows = [0] * len(activities)
+    mismatch_units = [0] * len(activities)
     raw_jurisdictions: set[str] = set()
-    selected_by_jurisdiction: Counter[str] = Counter()
-    mismatch_rows = 0
-    mismatch_units = 0
     raw_row_count = 0
     max_report_year = 0
 
     with open_validated_csv(path, contract) as opened:
         fingerprint_fields = opened.fieldnames
+        missing = sorted(
+            {field for activity in activities for field in activity.fields}
+            - set(fingerprint_fields)
+        )
+        if missing:
+            raise ValueError(
+                f"{path} is missing Table A2 activity columns: {', '.join(missing)}"
+            )
         for record_index, physical_line, row in opened.rows():
             raw_row_count += 1
             jurisdiction = normalized_key(row["JURIS_NAME"])
@@ -225,78 +393,68 @@ def select_permit_records(
             if report_year == 0:
                 raise ValueError(f"YEAR must be positive at record {record_index}")
             max_report_year = max(max_report_year, report_year)
+            if report_year_counts is not None:
+                report_year_counts[(jurisdiction, report_year)] += 1
             period = periods.get(jurisdiction)
             if period is None:
                 continue
-            permit_date = parse_date(
-                row["BP_ISSUE_DT1"],
-                field="BP_ISSUE_DT1",
-                record=record_index,
-            )
             effective_end = min(period.end, cutoff_date)
-            if permit_date is None:
-                included = period.start.year <= report_year <= effective_end.year
-            else:
-                included = period.start <= permit_date <= effective_end
-            if not included:
-                continue
-            categories = _strict_categories(row, record_index)
-            reported_total = parse_nonnegative_integer(
-                row["NO_BUILDING_PERMITS"],
-                field="NO_BUILDING_PERMITS",
-                record=record_index,
-            )
-            category_total = sum(categories)
-            if not (category_total or reported_total):
-                continue
-            if category_total != reported_total:
-                mismatch_rows += 1
-                mismatch_units += category_total - reported_total
-            records.append(
-                PermitRecord.from_values(
-                    source_record_index=record_index,
-                    csv_physical_line=physical_line,
+            for position, activity in enumerate(activities):
+                record = _activity_record(
+                    activity,
+                    row,
+                    record_index=record_index,
+                    physical_line=physical_line,
                     report_year=report_year,
                     jurisdiction=jurisdiction,
-                    jurisdiction_display=period.display,
-                    permit_date=permit_date,
-                    tracking_id=row["JURS_TRACKING_ID"],
-                    project_name=row["PROJECT_NAME"],
-                    apn=row["APN"],
-                    street_address=row["STREET_ADDRESS"],
-                    standard_address=row["STD_ADDRESS"],
-                    latitude=row["LATITUDE"],
-                    longitude=row["LONGITUDE"],
-                    categories=categories,
-                    reported_total=reported_total,
-                    unit_category=row["UNIT_CAT"],
-                    tenure=row["TENURE"],
-                    raw_row=row,
+                    period=period,
+                    effective_end=effective_end,
                     fingerprint_fields=fingerprint_fields,
                 )
-            )
-            selected_by_jurisdiction[jurisdiction] += 1
+                if record is None:
+                    continue
+                if record.units != record.reported_total:
+                    mismatch_rows[position] += 1
+                    mismatch_units[position] += record.units - record.reported_total
+                records[position].append(record)
+                selected_by_jurisdiction[position][jurisdiction] += 1
 
-    stats = {
-        "raw_row_count": raw_row_count,
-        "raw_jurisdiction_count": len(raw_jurisdictions),
-        "raw_jurisdictions_without_planning_period": sorted(
-            raw_jurisdictions - set(periods)
-        ),
-        "planning_periods_without_selected_rows": sorted(
-            key for key in periods if selected_by_jurisdiction[key] == 0
-        ),
-        "max_report_year": max_report_year,
-        "selected_row_count": len(records),
-        "reported_total_mismatch_rows": mismatch_rows,
-        "reported_total_net_difference": mismatch_units,
-    }
-    if mismatch_rows:
-        raise ValueError(
-            f"{mismatch_rows} selected Table A2 rows do not reconcile with "
-            f"NO_BUILDING_PERMITS; net category difference {mismatch_units}"
-        )
-    return tuple(records), stats
+    selections: list[tuple[tuple[PermitRecord, ...], dict[str, object]]] = []
+    for position, activity in enumerate(activities):
+        stats = {
+            "raw_row_count": raw_row_count,
+            "raw_jurisdiction_count": len(raw_jurisdictions),
+            "raw_jurisdictions_without_planning_period": sorted(
+                raw_jurisdictions - set(periods)
+            ),
+            "planning_periods_without_selected_rows": sorted(
+                key for key in periods if selected_by_jurisdiction[position][key] == 0
+            ),
+            "max_report_year": max_report_year,
+            "selected_row_count": len(records[position]),
+            "reported_total_mismatch_rows": mismatch_rows[position],
+            "reported_total_net_difference": mismatch_units[position],
+        }
+        if mismatch_rows[position]:
+            raise ValueError(
+                f"{mismatch_rows[position]} selected Table A2 rows do not reconcile "
+                f"with {activity.total_field}; net category difference "
+                f"{mismatch_units[position]}"
+            )
+        selections.append((tuple(records[position]), stats))
+    return tuple(selections)
+
+
+def select_permit_records(
+    path: Path,
+    contract: CsvContract,
+    periods: Mapping[str, PlanningPeriod],
+    cutoff_year: int,
+) -> tuple[tuple[PermitRecord, ...], dict[str, object]]:
+    ((records, stats),) = select_activity_records(
+        path, contract, periods, cutoff_year, (PERMIT_ACTIVITY,)
+    )
+    return records, stats
 
 
 def _vector_sum(records: Sequence[PermitRecord]) -> tuple[int, ...]:
@@ -421,6 +579,7 @@ def _decision_ledger_row(
     audit: DedupAuditEntry | None,
     *,
     cycle: str | None = None,
+    date_key: str = "permit_date",
 ) -> dict[str, object]:
     row: dict[str, object] = {
         "source_record_index": record.source_index,
@@ -435,7 +594,7 @@ def _decision_ledger_row(
         ).hexdigest(),
         "jurisdiction": record.jurisdiction,
         "report_year": record.report_year,
-        "permit_date": record.permit_date.isoformat() if record.permit_date else None,
+        date_key: record.permit_date.isoformat() if record.permit_date else None,
         "categories": dict(zip(CATEGORY_NAMES, record.categories)),
         "units": record.units,
         "decision": "removed_earlier_snapshot" if audit else "retained",
@@ -467,6 +626,7 @@ def _write_decision_ledgers(
     decision_ledger: Path,
     review_ledger: Path,
     cycles: Mapping[str, str] | None = None,
+    date_key: str = "permit_date",
 ) -> None:
     """Write the complete ledger and a compact closed set of review evidence."""
 
@@ -480,7 +640,7 @@ def _write_decision_ledgers(
     for record in sorted(selected, key=lambda item: item.source_index):
         audit = audit_by_index.get(record.source_index)
         cycle = cycles[record.jurisdiction] if cycles is not None else None
-        ledger_row = _decision_ledger_row(record, audit, cycle=cycle)
+        ledger_row = _decision_ledger_row(record, audit, cycle=cycle, date_key=date_key)
         rendered = json.dumps(
             ledger_row, sort_keys=True, ensure_ascii=False, separators=(",", ":")
         )
@@ -622,7 +782,13 @@ def build_airtable_artifacts(
     output_dir: Path,
     audit_dir: Path,
 ) -> AirtableBuildArtifacts:
-    """Build a cycle-aware, reviewed permit artifact for Airtable publication."""
+    """Build cycle-aware, reviewed permit and entitlement totals for Airtable.
+
+    Permits and entitlements are selected in one pass over Table A2 and are
+    deduplicated independently. The entitlement fields are merged into the
+    permit payload only after the permit projection is rendered, and the build
+    fails unless removing them reproduces that projection byte for byte.
+    """
 
     table_contract = load_contract(table_contract_path)
     rhna_contract = load_contract(rhna_contract_path)
@@ -630,12 +796,28 @@ def build_airtable_artifacts(
     periods, cycles, policy_sha256 = _load_airtable_cycle_policy(
         cycle_policy_path, sixth_periods
     )
-    selected, selection_stats = select_permit_records(
-        table_a2_path, table_contract, periods, cutoff_year
+    (
+        (selected, selection_stats),
+        (entitlement_selected, entitlement_selection_stats),
+    ) = select_activity_records(
+        table_a2_path,
+        table_contract,
+        periods,
+        cutoff_year,
+        (PERMIT_ACTIVITY, ENTITLEMENT_ACTIVITY),
     )
-    result = deduplicate(selected)
+    result = deduplicate_activity(PERMIT_ACTIVITY, selected)
     if len(selected) != len(result.retained) + len(result.removed):
         raise AssertionError("Airtable row conservation failed after deduplication")
+    entitlement_result = deduplicate_activity(
+        ENTITLEMENT_ACTIVITY, entitlement_selected
+    )
+    if len(entitlement_selected) != len(entitlement_result.retained) + len(
+        entitlement_result.removed
+    ):
+        raise AssertionError(
+            "Airtable entitlement row conservation failed after deduplication"
+        )
 
     retained_by_jurisdiction: dict[str, list[PermitRecord]] = defaultdict(list)
     for record in result.retained:
@@ -719,20 +901,142 @@ def build_airtable_artifacts(
             == len(jurisdiction_rows),
         },
     }
-    validate_json_document(jurisdiction_payload, output_schema_path)
+    permit_text = _json_text(jurisdiction_payload)
+
+    entitlements_by_jurisdiction: dict[str, list[PermitRecord]] = defaultdict(list)
+    for record in entitlement_result.retained:
+        entitlements_by_jurisdiction[record.jurisdiction].append(record)
+    entitlement_fields: dict[str, dict[str, object]] = {}
+    for key in periods:
+        records = entitlements_by_jurisdiction.get(key, [])
+        categories = _vector_sum(records)
+        entitlement_fields[key] = {
+            **{
+                f"entitlement_{name}": value
+                for name, value in zip(CATEGORY_NAMES, categories)
+            },
+            "entitlement_total": sum(categories),
+            "undated_entitlements": sum(
+                record.units for record in records if record.undated
+            ),
+            "entitlement_data_status": "reported" if records else "no_selected_rows",
+        }
+
+    entitlement_selected_categories = _vector_sum(entitlement_selected)
+    entitlement_retained_categories = _vector_sum(entitlement_result.retained)
+    entitlement_removed_categories = _vector_sum(entitlement_result.removed)
+    if (
+        tuple(
+            retained + removed
+            for retained, removed in zip(
+                entitlement_retained_categories, entitlement_removed_categories
+            )
+        )
+        != entitlement_selected_categories
+    ):
+        raise AssertionError("Airtable entitlement category totals do not reconcile")
+    if (
+        tuple(
+            sum(fields[f"entitlement_{name}"] for fields in entitlement_fields.values())
+            for name in CATEGORY_NAMES
+        )
+        != entitlement_retained_categories
+    ):
+        raise AssertionError("Airtable entitlement aggregation does not reconcile")
+
+    entitlement_metadata = {
+        "entitlement_selected_row_count": len(entitlement_selected),
+        "entitlement_selected_units": sum(entitlement_selected_categories),
+        "entitlement_retained_row_count": len(entitlement_result.retained),
+        "entitlement_removed_row_count": len(entitlement_result.removed),
+        "entitlement_removed_units": sum(entitlement_removed_categories),
+        "undated_entitlements": sum(
+            record.units for record in entitlement_result.retained if record.undated
+        ),
+    }
+    totals_payload = {
+        "metadata": {**metadata, **entitlement_metadata},
+        "jurisdictions": [
+            {**row, **entitlement_fields[str(row["jurisdiction_key"])]}
+            for row in jurisdiction_rows
+        ],
+    }
+    permit_projection = {
+        "metadata": {
+            key: value
+            for key, value in totals_payload["metadata"].items()
+            if key not in ENTITLEMENT_METADATA_FIELDS
+        },
+        "jurisdictions": [
+            {
+                key: value
+                for key, value in row.items()
+                if key not in ENTITLEMENT_ROW_FIELDS
+            }
+            for row in totals_payload["jurisdictions"]
+        ],
+    }
+    if _json_text(permit_projection) != permit_text:
+        raise AssertionError(
+            "Entitlement fields changed the Airtable permit projection"
+        )
+
+    entitlement_audit_payload = {
+        "metadata": totals_payload["metadata"],
+        "source_columns": {
+            "date": ENTITLEMENT_ACTIVITY.date_field,
+            "total": ENTITLEMENT_ACTIVITY.total_field,
+            "categories": {
+                name: list(group)
+                for name, group in zip(
+                    CATEGORY_NAMES, ENTITLEMENT_ACTIVITY.category_fields
+                )
+            },
+        },
+        "selection": entitlement_selection_stats,
+        "selected_categories": dict(
+            zip(CATEGORY_NAMES, entitlement_selected_categories)
+        ),
+        "retained_categories": dict(
+            zip(CATEGORY_NAMES, entitlement_retained_categories)
+        ),
+        "removed_categories": dict(zip(CATEGORY_NAMES, entitlement_removed_categories)),
+        "removed_by_rule": _removal_rule_stats(entitlement_result),
+        "invariants": {
+            "row_conservation": True,
+            "category_conservation": True,
+            "jurisdiction_aggregation_reconciles": True,
+            "permit_projection_unchanged": True,
+            "cycle_counts_reconcile": sum(cycle_counts.values())
+            == len(jurisdiction_rows),
+        },
+    }
+    validate_json_document(totals_payload, output_schema_path)
 
     jurisdiction_json = output_dir / "airtable_totals.json"
     audit_summary = output_dir / "airtable_audit_summary.json"
     decision_ledger = audit_dir / "airtable_dedupe_decisions.jsonl"
     review_ledger = audit_dir / "airtable_dedupe_review.jsonl"
-    _atomic_write(jurisdiction_json, _json_text(jurisdiction_payload))
+    entitlement_audit_summary = output_dir / "airtable_entitlement_audit_summary.json"
+    entitlement_decision_ledger = audit_dir / "airtable_entitlement_decisions.jsonl"
+    entitlement_review_ledger = audit_dir / "airtable_entitlement_review.jsonl"
+    _atomic_write(jurisdiction_json, _json_text(totals_payload))
     _atomic_write(audit_summary, _json_text(audit_payload))
+    _atomic_write(entitlement_audit_summary, _json_text(entitlement_audit_payload))
     _write_decision_ledgers(
         selected=selected,
         result=result,
         decision_ledger=decision_ledger,
         review_ledger=review_ledger,
         cycles=cycles,
+    )
+    _write_decision_ledgers(
+        selected=entitlement_selected,
+        result=entitlement_result,
+        decision_ledger=entitlement_decision_ledger,
+        review_ledger=entitlement_review_ledger,
+        cycles=cycles,
+        date_key="entitlement_date",
     )
 
     return AirtableBuildArtifacts(
@@ -744,6 +1048,13 @@ def build_airtable_artifacts(
         retained_rows=len(result.retained),
         removed_rows=len(result.removed),
         total_units=sum(retained_categories),
+        entitlement_audit_summary=entitlement_audit_summary,
+        entitlement_decision_ledger=entitlement_decision_ledger,
+        entitlement_review_ledger=entitlement_review_ledger,
+        entitlement_selected_rows=len(entitlement_selected),
+        entitlement_retained_rows=len(entitlement_result.retained),
+        entitlement_removed_rows=len(entitlement_result.removed),
+        entitlement_total_units=sum(entitlement_retained_categories),
     )
 
 
