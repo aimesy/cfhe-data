@@ -95,7 +95,7 @@ After all batches, the command fetches the entire snapshot again and requires ze
 
 Only after that complete readback succeeds, the command writes the same UTC timestamp to `Last APR Verified` for all 539 matched current records. This field therefore means the jurisdiction was checked against the reviewed HCD source, even when its permit figures were already correct. Under config version 3 it also certifies the four entitlement fields. `Last APR Update` remains the separate Airtable timestamp for an actual target or permit value change.
 
-The client has no create, delete, upsert, relink, or schema mutation method. Creating the date and entitlement fields and migrating the pace formulas are separate one-time setup. The ordinary automation still needs no permission to write schema. See [pace correction](pace-correction.md) for the formula behavior and before/after review.
+The permit sync only updates existing records. The client's create method serves only the [quarterly series](#quarterly-series), and the client has no method to delete a record or write schema. Creating the date and entitlement fields and migrating the pace formulas are separate one-time setup. The ordinary automation still needs no permission to write schema. See [pace correction](pace-correction.md) for the formula behavior and before/after review.
 
 ## Config version 3 rollout
 
