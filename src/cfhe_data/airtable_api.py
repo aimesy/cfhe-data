@@ -1,9 +1,13 @@
 """Narrow, defensive Airtable Web API access for the publication pipeline.
 
-The client deliberately exposes reads and updates only. Every update is bound to
-an exact record ID, an explicit write allowlist, and caller supplied expected
-values. It checks fresh state immediately before each batch and verifies state
-again after Airtable acknowledges the write.
+The client deliberately exposes reads, updates, and creates only; it never
+deletes, upserts, or changes schema. Every update is bound to an exact record
+ID, an explicit write allowlist, and caller supplied expected values. It checks
+fresh state immediately before each batch and verifies state again after
+Airtable acknowledges the write. A create writes only allowlisted fields and is
+verified against Airtable's response. Airtable has no conditional create, so a
+caller recovers from an interrupted create by planning again from a fresh
+listing, never by resending the batch.
 """
 
 from __future__ import annotations
@@ -80,10 +84,10 @@ class AirtableAmbiguousWriteError(AirtableAPIError):
 
     def __init__(self, record_ids: Sequence[str], *, cause_kind: str) -> None:
         ids = tuple(record_ids)
+        subject = "record IDs: " + ", ".join(ids) if ids else "a batch of new records"
         super().__init__(
-            "Airtable write outcome is unknown for record IDs: "
-            + ", ".join(ids)
-            + "; rerun safely so fresh state can determine what remains"
+            f"Airtable write outcome is unknown for {subject}"
+            "; rerun safely so fresh state can determine what remains"
         )
         self.record_ids = ids
         self.cause_kind = cause_kind
@@ -270,7 +274,7 @@ def _utc_now() -> dt.datetime:
 
 
 class AirtableClient:
-    """Read one exact table and update only explicitly writable fields."""
+    """Read one exact table and write only explicitly writable fields."""
 
     def __init__(
         self,
@@ -287,6 +291,8 @@ class AirtableClient:
         retry_cap_seconds: float = 30.0,
         sleep: Callable[[float], None] = time.sleep,
         now: Callable[[], dt.datetime] = _utc_now,
+        min_request_interval_seconds: float = 0.0,
+        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         if not isinstance(token, str) or not token.strip():
             raise AirtableConfigurationError("Airtable token must be nonempty")
@@ -343,6 +349,15 @@ class AirtableClient:
             raise AirtableConfigurationError(
                 "retry_base_seconds cannot exceed retry_cap_seconds"
             )
+        if (
+            isinstance(min_request_interval_seconds, bool)
+            or not isinstance(min_request_interval_seconds, (int, float))
+            or not math.isfinite(min_request_interval_seconds)
+            or not 0 <= min_request_interval_seconds <= 10
+        ):
+            raise AirtableConfigurationError(
+                "min_request_interval_seconds must be between 0 and 10"
+            )
         self._transport = transport or UrllibTransport()
         self._timeout_seconds = float(timeout_seconds)
         self._max_retries = max_retries
@@ -350,6 +365,12 @@ class AirtableClient:
         self._retry_cap_seconds = float(retry_cap_seconds)
         self._sleep = sleep
         self._now = now
+        # Airtable allows five requests per second per base and answers a burst
+        # with a 30 second penalty. A long sync paces every attempt instead of
+        # relying on 429 retries.
+        self._min_request_interval = float(min_request_interval_seconds)
+        self._monotonic = monotonic
+        self._last_request_started: float | None = None
 
     def __repr__(self) -> str:
         return (
@@ -583,6 +604,126 @@ class AirtableClient:
         order = {update.record_id: index for index, update in enumerate(normalized)}
         statuses.sort(key=lambda item: order[str(item["record_id"])])
         return self._result(statuses, batch_count=completed_batches)
+
+    def create_records(
+        self,
+        records: Sequence[Mapping[str, object]],
+        *,
+        batch_size: int = MAX_AIRTABLE_BATCH_SIZE,
+        verify_schema: bool = True,
+    ) -> dict[str, Any]:
+        """Create records from writable fields and verify Airtable's response.
+
+        A batch whose outcome is unknown raises AirtableAmbiguousWriteError and
+        stops the run. The caller must replan from a fresh listing rather than
+        resend the batch, because a resent create can duplicate a record.
+        """
+
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int):
+            raise AirtableConfigurationError("batch_size must be an integer")
+        if not 1 <= batch_size <= MAX_AIRTABLE_BATCH_SIZE:
+            raise AirtableConfigurationError("batch_size must be between 1 and 10")
+        normalized = self._normalize_creates(records)
+        if normalized and verify_schema:
+            self.get_table_schema()
+
+        created: list[str] = []
+        batch_count = 0
+        for start in range(0, len(normalized), batch_size):
+            created.extend(self._post_records(normalized[start : start + batch_size]))
+            batch_count += 1
+        return {
+            "complete": True,
+            "base_id": self.base_id,
+            "table_id": self.table_id,
+            "requested_record_count": len(normalized),
+            "created_record_count": len(created),
+            "batch_count": batch_count,
+            "created_record_ids": created,
+            "values": "redacted",
+        }
+
+    def _normalize_creates(
+        self, records: Sequence[Mapping[str, object]]
+    ) -> list[dict[str, Any]]:
+        if isinstance(records, (str, bytes)) or not isinstance(records, Sequence):
+            raise AirtableConfigurationError(
+                "records must be a sequence of field objects"
+            )
+        normalized: list[dict[str, Any]] = []
+        for position, fields in enumerate(records):
+            if not isinstance(fields, Mapping) or not fields:
+                raise AirtableConfigurationError(
+                    f"records[{position}] must be a nonempty object"
+                )
+            invalid = [
+                field_id
+                for field_id in fields
+                if not isinstance(field_id, str)
+                or not _FIELD_ID_RE.fullmatch(field_id)
+                or field_id not in self._writable_field_set
+            ]
+            if invalid:
+                raise AirtableConfigurationError(
+                    f"records[{position}] has unwritable or invalid field IDs"
+                )
+            normalized.append(
+                {
+                    field_id: _copy_json_value(
+                        fields[field_id], f"records[{position}].{field_id}"
+                    )
+                    for field_id in sorted(fields)
+                }
+            )
+        return normalized
+
+    def _post_records(self, records: Sequence[Mapping[str, Any]]) -> list[str]:
+        if not 1 <= len(records) <= MAX_AIRTABLE_BATCH_SIZE:
+            raise AirtableConfigurationError(
+                "Internal Airtable create batch must contain 1 through 10 records"
+            )
+        try:
+            payload = self._request_json(
+                method="POST",
+                endpoint=f"{self.base_id}/{self.table_id}",
+                payload={
+                    "returnFieldsByFieldId": True,
+                    "typecast": False,
+                    "records": [{"fields": dict(fields)} for fields in records],
+                },
+            )
+        except AirtableAmbiguousWriteError:
+            raise
+        except AirtableHTTPError as error:
+            if error.status in {500, 502, 503, 504}:
+                raise AirtableAmbiguousWriteError(
+                    (), cause_kind="server_error"
+                ) from error
+            raise
+
+        raw_records = payload.get("records")
+        if not isinstance(raw_records, list) or len(raw_records) != len(records):
+            raise AirtableWriteVerificationError(
+                (),
+                reason="the POST response did not acknowledge exactly the requested records",
+            )
+        created: list[str] = []
+        for raw_record, desired in zip(raw_records, records, strict=True):
+            record = self._normalize_record(raw_record)
+            created.append(record["id"])
+            if not all(
+                _json_equal(record["fields"].get(field_id), value)
+                for field_id, value in desired.items()
+            ):
+                raise AirtableWriteVerificationError(
+                    created,
+                    reason="the POST response did not contain the desired values",
+                )
+        if len(created) != len(set(created)):
+            raise AirtableWriteVerificationError(
+                created, reason="the POST response repeated a record ID"
+            )
+        return created
 
     def _classify_updates(
         self, updates: Sequence[_NormalizedUpdate]
@@ -821,10 +962,10 @@ class AirtableClient:
         payload: Mapping[str, Any] | None = None,
         write_record_ids: Sequence[str] = (),
     ) -> dict[str, Any]:
-        if method not in {"GET", "PATCH"}:
+        if method not in {"GET", "PATCH", "POST"}:
             raise AirtableConfigurationError("Unsupported Airtable HTTP method")
-        if payload is not None and method != "PATCH":
-            raise AirtableConfigurationError("Only PATCH requests may have a body")
+        if payload is not None and method == "GET":
+            raise AirtableConfigurationError("GET requests cannot have a body")
         url = f"{AIRTABLE_API_ROOT}/{endpoint}"
         if query:
             url += "?" + urllib.parse.urlencode(list(query), doseq=True)
@@ -845,6 +986,7 @@ class AirtableClient:
             headers["Content-Type"] = "application/json; charset=utf-8"
 
         for attempt in range(self._max_retries + 1):
+            self._pace()
             try:
                 response = self._transport.request(
                     method=method,
@@ -854,7 +996,7 @@ class AirtableClient:
                     timeout=self._timeout_seconds,
                 )
             except TransportFailure as error:
-                if method == "PATCH":
+                if method != "GET":
                     raise AirtableAmbiguousWriteError(
                         write_record_ids, cause_kind="transport"
                     ) from error
@@ -879,10 +1021,15 @@ class AirtableClient:
                     )
                 return parsed
 
-            if (
-                response.status in TRANSIENT_HTTP_STATUSES
-                and attempt < self._max_retries
-            ):
+            # A rate limit rejects the request before Airtable processes it.
+            # A server error after a POST may follow a completed create, so a
+            # create is never resent after one.
+            retryable = (
+                response.status == 429
+                if method == "POST"
+                else response.status in TRANSIENT_HTTP_STATUSES
+            )
+            if retryable and attempt < self._max_retries:
                 self._sleep(
                     self._retry_delay(
                         attempt, self._header(response.headers, "Retry-After")
@@ -898,6 +1045,17 @@ class AirtableClient:
             )
 
         raise AssertionError("Airtable request loop exhausted unexpectedly")
+
+    def _pace(self) -> None:
+        if self._min_request_interval <= 0:
+            return
+        now = self._monotonic()
+        if self._last_request_started is not None:
+            wait = self._last_request_started + self._min_request_interval - now
+            if wait > 0:
+                self._sleep(wait)
+                now = self._monotonic()
+        self._last_request_started = now
 
     def _retry_delay(self, attempt: int, retry_after: str | None) -> float:
         exponential = min(

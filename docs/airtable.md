@@ -138,3 +138,19 @@ A jurisdiction is held, and left unchanged, when it has no single current RHNA &
 Apply rebuilds the plan from fresh Airtable and HCD reads and requires the same plan digest before writing. Updates are conditional on the reviewed old values and are read back, and a final full read must show no remaining changes. Volunteer edits to `HE Compliance` that disagree with HCD are overwritten on the next run.
 
 The step runs in the `publish-airtable` job after the permit publication, so the daily refresh runs it. The first application, on October 19, 2026, corrected 95 records: 75 from out of compliance to in, 15 blank to in, 3 blank to out, and Brisbane and Tulare from in to out.
+
+## Quarterly series
+
+`cfhe-data series-sync` publishes `airtable_series.json` to the `APR Quarterly` table. `config/airtable_series_sync.json` pins the table, its field IDs and option digests, and the Jurisdictions name and unincorporated fields. A record is identified by its single Jurisdictions link together with `Year` and `Quarter`; `Key` is a label and plays no part in matching. Jurisdiction names match by the same rules as the permit sync. Unlike the compliance sync, the series sync does not fold accents.
+
+The plan matches every series row to one record. It rewrites the changed fields of matched records and creates the rows still missing. Before creating, it fills records whose fields are all blank, such as the rows Airtable adds to a new table. It never deletes. A record with a valid identity outside the series is reported as an orphan and left alone. Publication is blocked when:
+
+- the series build recorded a sync blocker;
+- an Airtable jurisdiction has no series rows, or a series jurisdiction has no single Airtable match;
+- a record is neither blank nor fully identified;
+- two records share a jurisdiction, year, and quarter;
+- a pinned field type or option set has changed.
+
+Apply rebuilds the plan from a fresh read and requires the same plan digest before writing. Updates are conditional on the reviewed old values, and a final full read must show no remaining change. A record someone adds by hand during an apply can repeat a created row; the final read then reports the repeat, and publication stays blocked until it is resolved. Volunteer edits to series fields are overwritten on the next run. The series sync does not stamp `Last APR Verified`.
+
+The step runs in the `publish-airtable` job after the compliance sync, even when an earlier step failed. Creation writes ten records per request, so the first apply takes about ten minutes. An update reads each changed record twice before writing it, at four requests a second, so a rewrite of the whole table takes about two and a half hours; the job allows 180 minutes.

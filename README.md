@@ -30,6 +30,7 @@ HCD APR Table A2 + official planning periods
 - `data/processed/audit_summary.json`, with selection totals, removal rules, and conservation checks
 - `data/processed/airtable_audit_summary.json`, with the same checks and removal-rule breakdown applied to the mixed current-cycle scope
 - `data/processed/airtable_entitlement_audit_summary.json`, with the Table A2 entitlement columns used and the same selection totals, removal rules, and conservation checks applied to entitlements in the Airtable scope
+- `data/processed/airtable_series.json`, the input for the APR Quarterly table in Airtable, with entitlements, building permits, and completions for each jurisdiction in every calendar quarter from 2018 through the cutoff year
 - `data/run/dedupe_decisions.jsonl`, `data/run/airtable_dedupe_decisions.jsonl`, and `data/run/airtable_entitlement_decisions.jsonl`, complete local decision ledgers excluded from Git and GitHub Actions artifacts
 - `data/run/dedupe_review.jsonl`, `data/run/airtable_dedupe_review.jsonl`, and `data/run/airtable_entitlement_review.jsonl`, compact review ledgers containing every removal plus its directly matched and final referenced rows; these are attached to refresh workflow runs but never committed
 
@@ -118,6 +119,18 @@ The older `airtable-plan` command remains available for offline comparisons from
 ## Housing element compliance
 
 `cfhe-data he-compliance-sync` copies HCD's weekly Housing Element Compliance Report into `HE Compliance` and `Review Date` on each current RHNA & HE record, which drives the public Builder's Remedy view. It runs daily after permit publication. Without `--apply` it is read only. See the [Airtable operations guide](docs/airtable.md#housing-element-compliance).
+
+## Quarterly series
+
+`cfhe-data series-sync` keeps the `APR Quarterly` table equal to `airtable_series.json`, so activity can be compared before and after a housing law or program takes effect. Each record is one jurisdiction in one calendar quarter and links to its Jurisdictions record. Each stage is dated by its own Table A2 column:
+
+- entitlements by `ENT_APPROVE_DT1`;
+- building permits by `BP_ISSUE_DT1`;
+- completions by `CO_ISSUE_DT1`.
+
+Every stage reports the income bands and the total, and splits units by type and by approval program. A quarter with no activity reports zeros. `Data Flags` warn when a year is incomplete or its dates are unreliable.
+
+Entitlements and permits are deduplicated as they are for the cycle totals, and completions follow the permit rules. Before publication, the build checks that each jurisdiction’s quarters inside its planning period add up to the published entitlement and permit totals, and any difference blocks the sync. Without `--apply` the command is read only. The `publish-airtable` job runs it after the compliance sync. It updates and creates records but never deletes one. See [methodology](docs/methodology.md#quarterly-series) and the [Airtable operations guide](docs/airtable.md#quarterly-series).
 
 ## Official sources
 

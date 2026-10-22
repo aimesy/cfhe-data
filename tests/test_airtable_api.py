@@ -614,9 +614,203 @@ def test_python_bool_does_not_equal_numeric_prevalue() -> None:
         )
 
 
-def test_no_create_delete_or_upsert_operations_are_exposed() -> None:
+def test_no_delete_or_upsert_operations_are_exposed() -> None:
     api = client(QueueTransport([]))
 
-    assert not hasattr(api, "create_record")
     assert not hasattr(api, "delete_record")
+    assert not hasattr(api, "delete_records")
     assert not hasattr(api, "upsert_records")
+
+
+def created(*items: tuple[str, Mapping[str, Any]]) -> HttpResponse:
+    return response({"records": [record(rid, **fields) for rid, fields in items]})
+
+
+def test_create_posts_writable_fields_and_verifies_the_response() -> None:
+    transport = QueueTransport(
+        [
+            response(schema_payload()),
+            created(
+                ("recNew1", {FIELD_VLI: 1, FIELD_LI: 2}),
+                ("recNew2", {FIELD_VLI: 3, FIELD_LI: 4}),
+            ),
+        ]
+    )
+
+    result = client(transport).create_records(
+        [{FIELD_VLI: 1, FIELD_LI: 2}, {FIELD_VLI: 3, FIELD_LI: 4}]
+    )
+
+    post = transport.calls[1]
+    assert post["method"] == "POST"
+    assert urllib.parse.urlparse(post["url"]).path.endswith(f"/{BASE_ID}/{TABLE_ID}")
+    payload = json.loads(post["body"])
+    assert payload == {
+        "returnFieldsByFieldId": True,
+        "typecast": False,
+        "records": [
+            {"fields": {FIELD_LI: 2, FIELD_VLI: 1}},
+            {"fields": {FIELD_LI: 4, FIELD_VLI: 3}},
+        ],
+    }
+    assert result["created_record_ids"] == ["recNew1", "recNew2"]
+    assert result["created_record_count"] == 2
+    assert result["batch_count"] == 1
+
+
+def test_creates_are_split_into_batches_no_larger_than_ten() -> None:
+    first = [(f"recNew{index}", {FIELD_VLI: index}) for index in range(10)]
+    transport = QueueTransport(
+        [created(*first), created(("recNew10", {FIELD_VLI: 10}))]
+    )
+
+    result = client(transport).create_records(
+        [{FIELD_VLI: index} for index in range(11)], verify_schema=False
+    )
+
+    sizes = [len(json.loads(call["body"])["records"]) for call in transport.calls]
+    assert sizes == [10, 1]
+    assert result["batch_count"] == 2
+    assert result["created_record_count"] == 11
+
+
+def test_empty_create_makes_no_request() -> None:
+    transport = QueueTransport([])
+
+    result = client(transport).create_records([])
+
+    assert transport.calls == []
+    assert result["created_record_count"] == 0
+
+
+@pytest.mark.parametrize(
+    "bad_records",
+    [
+        [{}],
+        [{"VLI": 1}],
+        [{FIELD_LINK: ["recOne123"]}],
+        ["not a mapping"],
+    ],
+)
+def test_creates_require_nonempty_writable_fields(bad_records: list[Any]) -> None:
+    transport = QueueTransport([])
+    api = client(
+        transport,
+        fields=(FIELD_VLI, FIELD_LI, FIELD_LINK),
+        writable_fields=(FIELD_VLI, FIELD_LI),
+    )
+
+    with pytest.raises(AirtableConfigurationError):
+        api.create_records(bad_records, verify_schema=False)
+
+    assert transport.calls == []
+
+
+def test_transport_failure_during_create_is_ambiguous_and_not_retried() -> None:
+    transport = QueueTransport([TransportFailure("socket closed")])
+
+    with pytest.raises(AirtableAmbiguousWriteError) as caught:
+        client(transport).create_records([{FIELD_VLI: 1}], verify_schema=False)
+
+    assert caught.value.cause_kind == "transport"
+    assert caught.value.record_ids == ()
+    assert "a batch of new records" in str(caught.value)
+    assert len(transport.calls) == 1
+
+
+def test_server_error_after_create_is_ambiguous_and_not_retried() -> None:
+    sleeps: list[float] = []
+    transport = QueueTransport(
+        [response({"error": {"type": "SERVER_ERROR"}}, status=503)]
+    )
+
+    with pytest.raises(AirtableAmbiguousWriteError) as caught:
+        client(transport, sleeps=sleeps).create_records(
+            [{FIELD_VLI: 1}], verify_schema=False
+        )
+
+    assert caught.value.cause_kind == "server_error"
+    assert len(transport.calls) == 1
+    assert sleeps == []
+
+
+def test_rate_limited_create_is_retried() -> None:
+    sleeps: list[float] = []
+    transport = QueueTransport(
+        [
+            response(
+                {"error": {"type": "RATE_LIMITED"}},
+                status=429,
+                **{"Retry-After": "30"},
+            ),
+            created(("recNew1", {FIELD_VLI: 1})),
+        ]
+    )
+
+    result = client(transport, sleeps=sleeps).create_records(
+        [{FIELD_VLI: 1}], verify_schema=False
+    )
+
+    assert sleeps == [30.0]
+    assert result["created_record_ids"] == ["recNew1"]
+
+
+@pytest.mark.parametrize(
+    "reply",
+    [
+        created(),
+        created(("recNew1", {FIELD_VLI: 2})),
+        created(("recNew1", {FIELD_VLI: 1}), ("recNew1", {FIELD_VLI: 1})),
+        response({"records": "missing"}),
+    ],
+)
+def test_create_response_must_echo_each_requested_record(reply: HttpResponse) -> None:
+    transport = QueueTransport([reply])
+    records = [{FIELD_VLI: 1}]
+    if len(json.loads(reply.body).get("records") or []) == 2:
+        records = [{FIELD_VLI: 1}, {FIELD_VLI: 1}]
+
+    with pytest.raises(AirtableWriteVerificationError):
+        client(transport).create_records(records, verify_schema=False)
+
+
+def test_requests_are_paced_to_the_minimum_interval() -> None:
+    sleeps: list[float] = []
+    clock = iter([100.0, 100.05, 100.25, 100.6])
+    transport = QueueTransport(
+        [
+            response(schema_payload()),
+            response(schema_payload()),
+            response(schema_payload()),
+        ]
+    )
+    api = AirtableClient(
+        token=TOKEN,
+        base_id=BASE_ID,
+        table_id=TABLE_ID,
+        managed_field_ids=(FIELD_VLI, FIELD_LI),
+        transport=transport,
+        sleep=sleeps.append,
+        min_request_interval_seconds=0.25,
+        monotonic=lambda: next(clock),
+    )
+
+    for _ in range(3):
+        api.get_table_schema()
+
+    # The second request waits out the interval; the third is already late.
+    assert sleeps == [pytest.approx(0.2)]
+    assert len(transport.calls) == 3
+
+
+@pytest.mark.parametrize("interval", [-0.1, 11, float("nan"), True])
+def test_request_interval_must_be_a_small_nonnegative_number(interval: Any) -> None:
+    with pytest.raises(AirtableConfigurationError, match="min_request_interval"):
+        AirtableClient(
+            token=TOKEN,
+            base_id=BASE_ID,
+            table_id=TABLE_ID,
+            managed_field_ids=(FIELD_VLI,),
+            transport=QueueTransport([]),
+            min_request_interval_seconds=interval,
+        )

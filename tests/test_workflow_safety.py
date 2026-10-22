@@ -25,6 +25,7 @@ def test_refresh_workflow_uploads_only_compact_review_evidence() -> None:
     assert "data/processed/airtable_entitlement_audit_summary.json" in upload
     committed = workflow.split("git add -- \\", 1)[1].split("git commit", 1)[0]
     assert "data/processed/airtable_entitlement_audit_summary.json" in committed
+    assert "data/processed/airtable_series.json" in committed
     assert "data/run/" not in committed
     assert "Compact decision ledgers" in workflow
     assert "GITHUB_SERVER_URL" in workflow
@@ -82,9 +83,16 @@ def test_airtable_publication_runs_only_after_ci_on_master() -> None:
     assert '--git-sha "$GITHUB_SHA"' in workflow
     assert "--cycle-policy config/airtable_cycles.json" in workflow
     assert "--apply" in workflow
-    assert workflow.count('test "$(git rev-parse origin/master)" = "$GITHUB_SHA"') == 3
-    compliance_step = workflow.split("Sync HCD housing element compliance", 1)[1]
+    assert workflow.count('test "$(git rev-parse origin/master)" = "$GITHUB_SHA"') == 4
+    compliance_step, series_step = workflow.split(
+        "Sync HCD housing element compliance", 1
+    )[1].split("Sync the quarterly series", 1)
     assert 'test "$(git rev-parse origin/master)" = "$GITHUB_SHA"' in compliance_step
     assert "cfhe-data he-compliance-sync" in compliance_step
+    assert "if: ${{ !cancelled() }}" in series_step
+    assert 'test "$(git rev-parse origin/master)" = "$GITHUB_SHA"' in series_step
+    assert "cfhe-data series-sync" in series_step
+    assert "--series data/processed/airtable_series.json" in series_step
+    assert "--apply" in series_step
     assert "pull_request_target" not in workflow
     assert "actions/upload-artifact" not in workflow
