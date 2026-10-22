@@ -1,0 +1,899 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CFHE quarterly APR series for Airtable",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "columns",
+    "metadata",
+    "rows"
+  ],
+  "properties": {
+    "columns": {
+      "const": [
+        "key",
+        "jurisdiction",
+        "jurisdiction_key",
+        "year",
+        "quarter",
+        "quarter_start",
+        "table_a2_rows",
+        "data_flags",
+        "entitlements_vli",
+        "entitlements_li",
+        "entitlements_mi",
+        "entitlements_ami",
+        "entitlements_total",
+        "entitlements_deed_restricted",
+        "entitlements_sfd",
+        "entitlements_sfa",
+        "entitlements_2_to_4",
+        "entitlements_5_plus",
+        "entitlements_adu",
+        "entitlements_mh",
+        "entitlements_sb35",
+        "entitlements_sb9",
+        "entitlements_ab2011",
+        "entitlements_density_bonus",
+        "permits_vli",
+        "permits_li",
+        "permits_mi",
+        "permits_ami",
+        "permits_total",
+        "permits_deed_restricted",
+        "permits_sfd",
+        "permits_sfa",
+        "permits_2_to_4",
+        "permits_5_plus",
+        "permits_adu",
+        "permits_mh",
+        "permits_sb35",
+        "permits_sb9",
+        "permits_ab2011",
+        "permits_density_bonus",
+        "completions_vli",
+        "completions_li",
+        "completions_mi",
+        "completions_ami",
+        "completions_total",
+        "completions_deed_restricted",
+        "completions_sfd",
+        "completions_sfa",
+        "completions_2_to_4",
+        "completions_5_plus",
+        "completions_adu",
+        "completions_mh",
+        "completions_sb35",
+        "completions_sb9",
+        "completions_ab2011",
+        "completions_density_bonus"
+      ]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cutoff_year",
+        "last_updated",
+        "source_manifest_sha256",
+        "dedupe_profile",
+        "cycle_policy_sha256",
+        "cycle_counts",
+        "window_start",
+        "window_end",
+        "jurisdiction_count",
+        "row_count",
+        "quarters_per_jurisdiction",
+        "provisional_years",
+        "heaping_rule",
+        "heaping",
+        "program_columns",
+        "reconciliation",
+        "stages",
+        "sync_blockers"
+      ],
+      "properties": {
+        "cutoff_year": {
+          "type": "integer",
+          "minimum": 2018,
+          "maximum": 3000
+        },
+        "last_updated": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "source_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "dedupe_profile": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cycle_policy_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "cycle_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "window_start": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "window_end": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "jurisdiction_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "row_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quarters_per_jurisdiction": {
+          "type": "integer",
+          "minimum": 4
+        },
+        "provisional_years": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "year",
+              "reason"
+            ],
+            "properties": {
+              "year": {
+                "type": "integer"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "heaping_rule": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "min_dated_rows",
+            "min_share_on_one_date"
+          ],
+          "properties": {
+            "min_dated_rows": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "min_share_on_one_date": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "heaping": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "stage",
+              "jurisdiction_key",
+              "year",
+              "date",
+              "rows",
+              "dated_rows",
+              "share"
+            ],
+            "properties": {
+              "stage": {
+                "enum": [
+                  "entitlement",
+                  "permit",
+                  "completion"
+                ]
+              },
+              "jurisdiction_key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "year": {
+                "type": "integer"
+              },
+              "date": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              },
+              "rows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "dated_rows": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "share": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "program_columns": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "field",
+            "labels",
+            "skipped_labels",
+            "density_bonus_field"
+          ],
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "labels": {
+              "type": "object",
+              "additionalProperties": {
+                "enum": [
+                  "sb35",
+                  "sb9",
+                  "ab2011"
+                ]
+              }
+            },
+            "skipped_labels": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "density_bonus_field": {
+              "type": "string"
+            }
+          }
+        },
+        "reconciliation": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "jurisdictions_checked",
+              "mismatched_jurisdictions",
+              "net_difference"
+            ],
+            "properties": {
+              "jurisdictions_checked": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "mismatched_jurisdictions": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "net_difference": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "stages": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "entitlements",
+            "permits",
+            "completions"
+          ],
+          "properties": {
+            "entitlements": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_columns",
+                "dedupe_pass",
+                "selected_row_count",
+                "selected_units",
+                "retained_row_count",
+                "removed_row_count",
+                "removed_units",
+                "retained_units",
+                "dated_units",
+                "undated_units",
+                "undated_units_by_jurisdiction",
+                "removed_by_rule",
+                "program_label_rows",
+                "unrecognized_program_label_rows",
+                "unrecognized_unit_category_rows",
+                "density_bonus_unparsed_rows",
+                "selection"
+              ],
+              "properties": {
+                "source_columns": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "date",
+                    "total"
+                  ],
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "dedupe_pass": {
+                  "enum": [
+                    "carried",
+                    "snapshot"
+                  ]
+                },
+                "selected_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "selected_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "retained_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "removed_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "removed_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "retained_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "dated_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undated_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undated_units_by_jurisdiction": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "removed_by_rule": {
+                  "type": "object"
+                },
+                "program_label_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "unrecognized_program_label_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "unrecognized_unit_category_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "density_bonus_unparsed_rows": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "selection": {
+                  "type": "object"
+                }
+              }
+            },
+            "permits": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_columns",
+                "dedupe_pass",
+                "selected_row_count",
+                "selected_units",
+                "retained_row_count",
+                "removed_row_count",
+                "removed_units",
+                "retained_units",
+                "dated_units",
+                "undated_units",
+                "undated_units_by_jurisdiction",
+                "removed_by_rule",
+                "program_label_rows",
+                "unrecognized_program_label_rows",
+                "unrecognized_unit_category_rows",
+                "density_bonus_unparsed_rows",
+                "selection"
+              ],
+              "properties": {
+                "source_columns": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "date",
+                    "total"
+                  ],
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "dedupe_pass": {
+                  "enum": [
+                    "carried",
+                    "snapshot"
+                  ]
+                },
+                "selected_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "selected_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "retained_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "removed_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "removed_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "retained_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "dated_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undated_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undated_units_by_jurisdiction": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "removed_by_rule": {
+                  "type": "object"
+                },
+                "program_label_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "unrecognized_program_label_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "unrecognized_unit_category_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "density_bonus_unparsed_rows": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "selection": {
+                  "type": "object"
+                }
+              }
+            },
+            "completions": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source_columns",
+                "dedupe_pass",
+                "selected_row_count",
+                "selected_units",
+                "retained_row_count",
+                "removed_row_count",
+                "removed_units",
+                "retained_units",
+                "dated_units",
+                "undated_units",
+                "undated_units_by_jurisdiction",
+                "removed_by_rule",
+                "program_label_rows",
+                "unrecognized_program_label_rows",
+                "unrecognized_unit_category_rows",
+                "density_bonus_unparsed_rows",
+                "selection"
+              ],
+              "properties": {
+                "source_columns": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "date",
+                    "total"
+                  ],
+                  "properties": {
+                    "date": {
+                      "type": "string"
+                    },
+                    "total": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "dedupe_pass": {
+                  "enum": [
+                    "carried",
+                    "snapshot"
+                  ]
+                },
+                "selected_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "selected_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "retained_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "removed_row_count": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "removed_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "retained_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "dated_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undated_units": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "undated_units_by_jurisdiction": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "removed_by_rule": {
+                  "type": "object"
+                },
+                "program_label_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "unrecognized_program_label_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "unrecognized_unit_category_rows": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "density_bonus_unparsed_rows": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "selection": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "sync_blockers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "integer",
+            "minimum": 2018,
+            "maximum": 3000
+          },
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "string",
+            "pattern": "^((no_apr_rows|permit_dates_heaped|entitlement_dates_heaped|completion_dates_heaped|provisional_year)(, (no_apr_rows|permit_dates_heaped|entitlement_dates_heaped|completion_dates_heaped|provisional_year))*)?$"
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          },
+          {
+            "type": "integer",
+            "minimum": 0
+          }
+        ],
+        "minItems": 56,
+        "maxItems": 56
+      }
+    }
+  }
+}

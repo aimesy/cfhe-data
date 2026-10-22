@@ -168,7 +168,8 @@ def build_pace_review(
     then ``totals`` supplies reviewed new counts and planning dates. Both must
     cover the same jurisdictions, cycles and reporting cutoff. No writes occur.
     """
-    metadata, rows = _validate_source(totals)
+    # Entitlements may be present and are validated, but pace uses permits only.
+    metadata, rows = _validate_source(totals, entitlements=None)
     expected_count = cycle_policy.get("expected_jurisdiction_count")
     if (
         type(expected_count) is not int
@@ -188,7 +189,9 @@ def build_pace_review(
         baseline_totals = totals
         baseline_metadata, baseline_rows = metadata, rows
     else:
-        baseline_metadata, baseline_rows = _validate_source(baseline_totals)
+        baseline_metadata, baseline_rows = _validate_source(
+            baseline_totals, entitlements=None
+        )
         if (
             baseline_metadata["provisional"]
             or len(baseline_rows) != expected_count

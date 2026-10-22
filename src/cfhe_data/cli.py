@@ -38,6 +38,15 @@ from .he_compliance import (
     plan_record_updates as he_compliance_record_updates,
 )
 from .pipeline import build_airtable_artifacts, build_artifacts
+from .series import build_series_artifacts
+from .series_sync import build_plan as build_series_plan
+from .series_sync import fetch_snapshot as fetch_series_snapshot
+from .series_sync import plan_record_creates as series_record_creates
+from .series_sync import plan_record_updates as series_record_updates
+from .series_sync import require_complete as require_series_complete
+from .series_sync import require_eligible as require_series_eligible
+from .series_sync import summarize_plan as summarize_series_plan
+from .series_sync import verify_plan_unchanged as verify_series_plan_unchanged
 from .source import fetch_source, load_specs, stable_manifest
 from .webflow import build_change_plan, verify_change_plan
 
@@ -120,6 +129,18 @@ def _refresh(args: argparse.Namespace) -> int:
         output_dir=args.output_dir,
         audit_dir=args.audit_dir,
     )
+    series_artifacts = build_series_artifacts(
+        table_a2_path=results["table_a2"].path,
+        rhna_path=results["rhna_progress_6"].path,
+        table_contract_path=project_root / table_spec.schema,
+        rhna_contract_path=project_root / rhna_spec.schema,
+        cycle_policy_path=_project_path(project_root, args.airtable_cycle_policy),
+        series_schema_path=_project_path(project_root, args.airtable_series_schema),
+        totals_path=airtable_artifacts.jurisdiction_json,
+        source_manifest=manifest,
+        cutoff_year=args.cutoff_year,
+        output_dir=args.output_dir,
+    )
     print(
         json.dumps(
             {
@@ -134,6 +155,8 @@ def _refresh(args: argparse.Namespace) -> int:
                 "airtable_totals": str(airtable_artifacts.jurisdiction_json),
                 "airtable_audit_summary": str(airtable_artifacts.audit_summary),
                 "airtable_review_ledger": str(airtable_artifacts.review_ledger),
+                "airtable_series": str(series_artifacts.series_json),
+                "series_sync_blocker_count": series_artifacts.sync_blocker_count,
             },
             indent=2,
         )
@@ -166,6 +189,18 @@ def _build(args: argparse.Namespace) -> int:
         output_dir=args.output_dir,
         audit_dir=args.audit_dir,
     )
+    series_artifacts = build_series_artifacts(
+        table_a2_path=args.table_a2,
+        rhna_path=args.rhna,
+        table_contract_path=args.table_contract,
+        rhna_contract_path=args.rhna_contract,
+        cycle_policy_path=args.airtable_cycle_policy,
+        series_schema_path=args.airtable_series_schema,
+        totals_path=airtable_artifacts.jurisdiction_json,
+        source_manifest=manifest,
+        cutoff_year=args.cutoff_year,
+        output_dir=args.output_dir,
+    )
     print(
         json.dumps(
             {
@@ -177,6 +212,9 @@ def _build(args: argparse.Namespace) -> int:
                 "airtable_totals": str(airtable_artifacts.jurisdiction_json),
                 "review_ledger": str(artifacts.review_ledger),
                 "airtable_review_ledger": str(airtable_artifacts.review_ledger),
+                "airtable_series": str(series_artifacts.series_json),
+                "series_row_count": series_artifacts.row_count,
+                "series_sync_blocker_count": series_artifacts.sync_blocker_count,
             },
             indent=2,
         )
@@ -421,6 +459,61 @@ def _he_compliance_sync(args: argparse.Namespace) -> int:
     return 0
 
 
+def _series_sync(args: argparse.Namespace) -> int:
+    token = os.environ.get("AIRTABLE_TOKEN", "")
+    if not token:
+        raise AirtableSyncBlockedError(
+            "AIRTABLE_TOKEN is required and must be supplied through the environment"
+        )
+    config = _read_object(args.config, "Series sync config")
+    series = _read_object(args.series, "Quarterly series")
+
+    def plan_now() -> tuple[dict[str, object], object]:
+        snapshot, client = fetch_series_snapshot(token=token, config=config)
+        return build_series_plan(
+            series=series, snapshot=snapshot, config=config
+        ), client
+
+    plan, _client = plan_now()
+    if args.plan_output is not None:
+        _write_json(args.plan_output, plan)
+    if not args.apply:
+        print(json.dumps({"mode": "dry_run", **summarize_series_plan(plan)}, indent=2))
+        return 0
+    require_series_eligible(plan)
+    fresh_plan, client = plan_now()
+    require_series_eligible(fresh_plan)
+    verify_series_plan_unchanged(plan, fresh_plan)
+    # The final readback below rebuilds the whole plan, so each PATCH response is
+    # checked against the desired values without a second GET per record.
+    updated = client.update_records(
+        series_record_updates(fresh_plan, config),
+        verify_schema=False,
+        patch_response_is_final=True,
+    )
+    created = client.create_records(
+        series_record_creates(fresh_plan, config), verify_schema=False
+    )
+    final_plan, _client = plan_now()
+    require_series_eligible(final_plan)
+    require_series_complete(final_plan)
+    print(
+        json.dumps(
+            {
+                "mode": "applied",
+                **summarize_series_plan(plan),
+                "updated_count": updated["updated_record_count"],
+                "already_current_count": updated["already_current_record_count"],
+                "created_count": created["created_record_count"],
+                "readback_change_count": final_plan["change_count"],
+                "readback_orphan_count": final_plan["orphan_count"],
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="cfhe-data",
@@ -445,6 +538,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--airtable-output-schema",
         type=Path,
         default=Path("schemas/airtable_totals.json"),
+    )
+    refresh.add_argument(
+        "--airtable-series-schema",
+        type=Path,
+        default=Path("schemas/airtable_series.json"),
     )
     refresh.set_defaults(handler=_refresh)
 
@@ -477,6 +575,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--airtable-output-schema",
         type=Path,
         default=Path("schemas/airtable_totals.json"),
+    )
+    build.add_argument(
+        "--airtable-series-schema",
+        type=Path,
+        default=Path("schemas/airtable_series.json"),
     )
     build.set_defaults(handler=_build)
 
@@ -574,6 +677,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Apply an eligible plan; without this flag the command is read only",
     )
     he_compliance.set_defaults(handler=_he_compliance_sync)
+
+    series_sync = subparsers.add_parser(
+        "series-sync",
+        help="Sync the quarterly series to the APR Quarterly table, never deleting",
+    )
+    series_sync.add_argument(
+        "--config", type=Path, default=Path("config/airtable_series_sync.json")
+    )
+    series_sync.add_argument(
+        "--series", type=Path, default=Path("data/processed/airtable_series.json")
+    )
+    series_sync.add_argument("--plan-output", type=Path)
+    series_sync.add_argument(
+        "--apply",
+        action="store_true",
+        help="Apply an eligible plan; without this flag the command is read only",
+    )
+    series_sync.set_defaults(handler=_series_sync)
     return parser
 
 

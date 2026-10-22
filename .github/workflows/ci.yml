@@ -46,7 +46,9 @@ jobs:
       (github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/master' && inputs.publish_airtable)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # A full rewrite of the quarterly series reads each changed record twice
+    # before its PATCH, at four requests a second.
+    timeout-minutes: 180
     environment:
       name: airtable-production
     concurrency:
@@ -93,4 +95,16 @@ jobs:
           test "$(git rev-parse origin/master)" = "$GITHUB_SHA"
           cfhe-data he-compliance-sync \
             --config config/he_compliance_sync.json \
+            --apply
+      - name: Sync the quarterly series to Airtable
+        if: ${{ !cancelled() }}
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+        shell: bash
+        run: |
+          git fetch --no-tags origin +refs/heads/master:refs/remotes/origin/master
+          test "$(git rev-parse origin/master)" = "$GITHUB_SHA"
+          cfhe-data series-sync \
+            --config config/airtable_series_sync.json \
+            --series data/processed/airtable_series.json \
             --apply

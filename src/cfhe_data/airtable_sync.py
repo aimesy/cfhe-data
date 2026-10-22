@@ -14,6 +14,36 @@ from .webflow import canonical_sha256, validate_jurisdiction_totals
 
 PERMIT_BANDS = ("vli", "li", "mi", "ami")
 APR_DATE_FIELDS = ("apr_data_through", "apr_planning_start", "apr_planning_end")
+# Table A2 entitlements are a pipeline measure, never RHNA progress. They are
+# written to their own Airtable fields and never added to the permit bands.
+ENTITLEMENT_BANDS = (
+    "entitlement_vli",
+    "entitlement_li",
+    "entitlement_mi",
+    "entitlement_ami",
+)
+ENTITLEMENT_CATEGORY_FIELDS = (
+    "entitlement_acutely_low",
+    "entitlement_extremely_low",
+    "entitlement_very_low",
+    "entitlement_low",
+    "entitlement_moderate",
+    "entitlement_above_moderate",
+)
+ENTITLEMENT_ROW_FIELDS = {
+    *ENTITLEMENT_CATEGORY_FIELDS,
+    "entitlement_total",
+    "undated_entitlements",
+    "entitlement_data_status",
+}
+ENTITLEMENT_METADATA_FIELDS = {
+    "entitlement_selected_row_count",
+    "entitlement_selected_units",
+    "entitlement_retained_row_count",
+    "entitlement_removed_row_count",
+    "entitlement_removed_units",
+    "undated_entitlements",
+}
 BASE_METADATA_FIELDS = {
     "cutoff_year",
     "last_updated",
@@ -90,6 +120,7 @@ RHNA_FIELD_TYPES = {
     "rhna_end": "multipleLookupValues",
     "total_progress_override": "number",
     **dict.fromkeys(APR_DATE_FIELDS, "date"),
+    **dict.fromkeys(ENTITLEMENT_BANDS, "number"),
 }
 _SHA256_RE = re.compile(r"[0-9a-f]{64}\Z")
 _GIT_SHA_RE = re.compile(r"[0-9a-f]{40}\Z")
@@ -184,10 +215,15 @@ def normalize_sync_config(config: Mapping[str, object]) -> dict[str, object]:
     if (
         isinstance(version, bool)
         or not isinstance(version, int)
-        or version not in (1, 2)
+        or version not in (1, 2, 3)
     ):
-        raise AirtableSyncConfigurationError("config_version must be 1 or 2")
-    rhna_names = RHNA_FIELD_NAMES | (set(APR_DATE_FIELDS) if version == 2 else set())
+        raise AirtableSyncConfigurationError("config_version must be 1, 2, or 3")
+    # Each version manages every field of the version before it.
+    rhna_names = (
+        RHNA_FIELD_NAMES
+        | (set(APR_DATE_FIELDS) if version >= 2 else set())
+        | (set(ENTITLEMENT_BANDS) if version == 3 else set())
+    )
     count = raw["expected_jurisdiction_record_count"]
     if isinstance(count, bool) or not isinstance(count, int) or count < 1:
         raise AirtableSyncConfigurationError(
@@ -559,7 +595,21 @@ def project_airtable_snapshot(
                             for name in APR_DATE_FIELDS
                         }
                     }
-                    if normalized["config_version"] == 2
+                    if normalized["config_version"] >= 2
+                    else {}
+                ),
+                **(
+                    {
+                        "entitlement_values": {
+                            band: _integer(
+                                fields.get(rhna_fields[band]),
+                                f"RHNA record {record_id}.{band}",
+                                optional=True,
+                            )
+                            for band in ENTITLEMENT_BANDS
+                        }
+                    }
+                    if normalized["config_version"] == 3
                     else {}
                 ),
             }
@@ -617,7 +667,12 @@ def fetch_airtable_snapshot(
         + [rhna_fields["last_verified"]]
         + (
             [rhna_fields[name] for name in APR_DATE_FIELDS]
-            if normalized["config_version"] == 2
+            if normalized["config_version"] >= 2
+            else []
+        )
+        + (
+            [rhna_fields[band] for band in ENTITLEMENT_BANDS]
+            if normalized["config_version"] == 3
             else []
         ),
     )
@@ -637,15 +692,106 @@ def fetch_airtable_snapshot(
     )
 
 
+def _source_count(value: object, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise AirtableSyncError(f"{label} must be a nonnegative integer")
+    return value
+
+
+def _validate_entitlement_row(row: Mapping[str, object], position: int) -> None:
+    label = f"Airtable totals row {position}"
+    categories = [
+        _source_count(row[field], f"{label} {field}")
+        for field in ENTITLEMENT_CATEGORY_FIELDS
+    ]
+    total = _source_count(row["entitlement_total"], f"{label} entitlement_total")
+    undated = _source_count(
+        row["undated_entitlements"], f"{label} undated_entitlements"
+    )
+    if sum(categories) != total:
+        raise AirtableSyncError(
+            f"{label} entitlement_total does not equal the six entitlement categories"
+        )
+    if undated > total:
+        raise AirtableSyncError(
+            f"{label} undated_entitlements cannot exceed entitlement_total"
+        )
+    status = row["entitlement_data_status"]
+    if status not in {"reported", "no_selected_rows"}:
+        raise AirtableSyncError(f"{label} entitlement_data_status is invalid")
+    if status == "no_selected_rows" and total != 0:
+        raise AirtableSyncError(
+            f"{label} has entitlements but entitlement_data_status is no_selected_rows"
+        )
+
+
+def _validate_entitlement_metadata(
+    metadata: Mapping[str, object], rows: list[Mapping[str, object]]
+) -> dict[str, int]:
+    values = {
+        field: _source_count(metadata[field], f"Airtable totals metadata {field}")
+        for field in sorted(ENTITLEMENT_METADATA_FIELDS)
+    }
+    if (
+        values["entitlement_retained_row_count"]
+        != values["entitlement_selected_row_count"]
+        - values["entitlement_removed_row_count"]
+    ):
+        raise AirtableSyncError(
+            "Airtable entitlement row counts do not reconcile: retained must equal "
+            "selected minus removed"
+        )
+    if values["entitlement_removed_units"] > values["entitlement_selected_units"]:
+        raise AirtableSyncError(
+            "Airtable entitlement_removed_units exceeds entitlement_selected_units"
+        )
+    if (
+        sum(int(row["entitlement_total"]) for row in rows)
+        != values["entitlement_selected_units"] - values["entitlement_removed_units"]
+    ):
+        raise AirtableSyncError(
+            "Airtable entitlement totals do not reconcile with selected minus "
+            "removed entitlement units"
+        )
+    if (
+        sum(int(row["undated_entitlements"]) for row in rows)
+        != values["undated_entitlements"]
+    ):
+        raise AirtableSyncError(
+            "Airtable undated entitlements do not reconcile with metadata"
+        )
+    return values
+
+
 def _validate_source(
     totals: Mapping[str, object],
+    *,
+    entitlements: bool | None = False,
 ) -> tuple[dict[str, object], list[dict[str, object]]]:
+    # entitlements=True requires the Table A2 entitlement fields (config
+    # version 3), False rejects them as unknown fields (versions 1 and 2), and
+    # None accepts an artifact with either the complete set or none of them.
     metadata_raw = totals.get("metadata")
     rows_raw = totals.get("jurisdictions")
     if not isinstance(metadata_raw, Mapping) or not isinstance(rows_raw, list):
         raise AirtableSyncError("Airtable totals artifact is malformed")
     metadata = dict(metadata_raw)
-    expected_metadata = BASE_METADATA_FIELDS | {"cycle_policy_sha256", "cycle_counts"}
+    has_entitlements = not ENTITLEMENT_METADATA_FIELDS.isdisjoint(metadata)
+    if entitlements is True and not has_entitlements:
+        raise AirtableSyncError(
+            "Airtable totals lack the entitlement fields config version 3 requires"
+        )
+    if entitlements is False and has_entitlements:
+        raise AirtableSyncError("Airtable totals metadata fields changed")
+    entitlement_metadata_fields = (
+        ENTITLEMENT_METADATA_FIELDS if has_entitlements else set()
+    )
+    entitlement_row_fields = ENTITLEMENT_ROW_FIELDS if has_entitlements else set()
+    expected_metadata = (
+        BASE_METADATA_FIELDS
+        | {"cycle_policy_sha256", "cycle_counts"}
+        | entitlement_metadata_fields
+    )
     if set(metadata) != expected_metadata:
         raise AirtableSyncError("Airtable totals metadata fields changed")
     cycle_digest = metadata["cycle_policy_sha256"]
@@ -668,7 +814,12 @@ def _validate_source(
         if not isinstance(raw, Mapping):
             raise AirtableSyncError(f"Airtable totals row {position} is malformed")
         row = dict(raw)
-        if set(row) != BASE_ROW_FIELDS | {"cycle", "period_start", "period_end"}:
+        if (
+            set(row)
+            != BASE_ROW_FIELDS
+            | {"cycle", "period_start", "period_end"}
+            | entitlement_row_fields
+        ):
             raise AirtableSyncError(f"Airtable totals row {position} fields changed")
         key = row.get("jurisdiction_key")
         if (
@@ -697,10 +848,13 @@ def _validate_source(
             raise AirtableSyncError(
                 f"Airtable totals row {position} planning period must have positive duration"
             )
+        if has_entitlements:
+            _validate_entitlement_row(row, position)
         extras_by_key[key] = {
             "cycle": cycle,
             "period_start": row["period_start"],
             "period_end": row["period_end"],
+            **{field: row[field] for field in sorted(entitlement_row_fields)},
         }
         base_payload["jurisdictions"].append(
             {field: row[field] for field in BASE_ROW_FIELDS}
@@ -713,10 +867,14 @@ def _validate_source(
         raise AirtableSyncError("Airtable source cycle counts do not reconcile")
     for row in base_rows:
         row.update(extras_by_key[str(row["jurisdiction_key"])])
+    entitlement_metadata = (
+        _validate_entitlement_metadata(metadata, base_rows) if has_entitlements else {}
+    )
     return {
         **base_metadata,
         "cycle_policy_sha256": cycle_digest,
         "cycle_counts": dict(counts),
+        **entitlement_metadata,
     }, base_rows
 
 
@@ -746,6 +904,27 @@ def _target_bands(row: Mapping[str, object]) -> dict[str, int]:
     return result
 
 
+def _entitlement_bands(row: Mapping[str, object]) -> dict[str, int]:
+    result = {
+        "entitlement_vli": sum(
+            int(row[field])
+            for field in (
+                "entitlement_acutely_low",
+                "entitlement_extremely_low",
+                "entitlement_very_low",
+            )
+        ),
+        "entitlement_li": int(row["entitlement_low"]),
+        "entitlement_mi": int(row["entitlement_moderate"]),
+        "entitlement_ami": int(row["entitlement_above_moderate"]),
+    }
+    if sum(result.values()) != int(row["entitlement_total"]):
+        raise AirtableSyncError(
+            f"Airtable entitlement bands do not reconcile for {row['jurisdiction']!r}"
+        )
+    return result
+
+
 def airtable_sync_snapshot_sha256(snapshot: Mapping[str, object]) -> str:
     digest_input = dict(snapshot)
     digest_input.pop("retrieved_at", None)
@@ -764,7 +943,10 @@ def build_airtable_sync_plan(
 
     if not _GIT_SHA_RE.fullmatch(git_sha):
         raise AirtableSyncConfigurationError("git_sha must be a full lowercase SHA")
-    metadata, source_rows = _validate_source(totals)
+    normalized = normalize_sync_config(config)
+    manages_dates = normalized["config_version"] >= 2
+    manages_entitlements = normalized["config_version"] == 3
+    metadata, source_rows = _validate_source(totals, entitlements=manages_entitlements)
     if not isinstance(cycle_policy, Mapping):
         raise AirtableSyncConfigurationError("Airtable cycle policy must be an object")
     current_cycle_policy_sha256 = canonical_sha256(dict(cycle_policy))
@@ -772,7 +954,6 @@ def build_airtable_sync_plan(
         raise AirtableSyncConfigurationError(
             "Airtable totals were not built from the current cycle policy"
         )
-    normalized = normalize_sync_config(config)
     if snapshot.get("complete") is not True or snapshot.get("snapshot_version") != 2:
         raise AirtableSyncSnapshotError("Airtable snapshot is not complete version 2")
     for key in ("base_id", "jurisdictions_table_id", "rhna_table_id"):
@@ -871,7 +1052,6 @@ def build_airtable_sync_plan(
 
     rhna_fields = normalized["rhna_fields"]
     assert isinstance(rhna_fields, Mapping)
-    manages_dates = normalized["config_version"] == 2
     data_through = dt.date(metadata["cutoff_year"], 12, 31).isoformat()
     changes: list[dict[str, object]] = []
     verification_targets: list[dict[str, object]] = []
@@ -882,6 +1062,8 @@ def build_airtable_sync_plan(
     overrides: list[str] = []
     before_aggregate = {band: 0 for band in PERMIT_BANDS}
     after_aggregate = {band: 0 for band in PERMIT_BANDS}
+    entitlement_before_aggregate = {band: 0 for band in ENTITLEMENT_BANDS}
+    entitlement_after_aggregate = {band: 0 for band in ENTITLEMENT_BANDS}
     for key in sorted(source_by_key):
         source = source_by_key[key]
         target = targets[key]
@@ -941,6 +1123,42 @@ def build_airtable_sync_plan(
                 if expected_dates[name] != desired_dates[name]:
                     expected_fields[rhna_fields[name]] = expected_dates[name]
                     desired_fields[rhna_fields[name]] = desired_dates[name]
+        entitlement_change: dict[str, object] = {}
+        if manages_entitlements:
+            # Entitlement bands are compared and written on their own. They
+            # never enter the permit bands, aggregates, or progress checks.
+            entitlement_values = rhna.get("entitlement_values")
+            if not isinstance(entitlement_values, Mapping) or set(
+                entitlement_values
+            ) != set(ENTITLEMENT_BANDS):
+                raise AirtableSyncSnapshotError(
+                    "Airtable entitlement values are missing or malformed"
+                )
+            entitlement_before_raw = {
+                band: _integer(
+                    entitlement_values[band],
+                    f"RHNA record {rhna['record_id']}.{band}",
+                    optional=True,
+                )
+                for band in ENTITLEMENT_BANDS
+            }
+            entitlement_before = {
+                band: int(entitlement_before_raw[band] or 0)
+                for band in ENTITLEMENT_BANDS
+            }
+            entitlement_after = _entitlement_bands(source)
+            for band in ENTITLEMENT_BANDS:
+                entitlement_before_aggregate[band] += entitlement_before[band]
+                entitlement_after_aggregate[band] += entitlement_after[band]
+                if entitlement_before_raw[band] != entitlement_after[band]:
+                    expected_fields[rhna_fields[band]] = entitlement_before_raw[band]
+                    desired_fields[rhna_fields[band]] = entitlement_after[band]
+            entitlement_change = {
+                "before_entitlement_total": sum(entitlement_before.values()),
+                "after_entitlement_total": sum(entitlement_after.values()),
+                "entitlement_data_status": source["entitlement_data_status"],
+                "undated_entitlements": source["undated_entitlements"],
+            }
         if not desired_fields:
             unchanged_count += 1
             continue
@@ -956,6 +1174,7 @@ def build_airtable_sync_plan(
                 "after_total": sum(after.values()),
                 "data_status": source["data_status"],
                 "undated_permits": source["undated_permits"],
+                **entitlement_change,
             }
         )
 
@@ -992,11 +1211,15 @@ def build_airtable_sync_plan(
         )
     changes.sort(key=lambda item: str(item["jurisdiction_key"]))
     verification_targets.sort(key=lambda item: str(item["jurisdiction_key"]))
+    if manages_entitlements:
+        intent = "update_existing_permit_entitlement_and_apr_date_fields_only"
+    elif manages_dates:
+        intent = "update_existing_permit_and_apr_date_fields_only"
+    else:
+        intent = "update_existing_permit_fields_only"
     plan: dict[str, object] = {
         "plan_version": 2,
-        "intent": "update_existing_permit_and_apr_date_fields_only"
-        if manages_dates
-        else "update_existing_permit_fields_only",
+        "intent": intent,
         "apply_eligible": not blockers,
         "git_sha": git_sha,
         "source_sha256": canonical_sha256(totals),
@@ -1023,6 +1246,15 @@ def build_airtable_sync_plan(
                 if manages_dates
                 else {}
             ),
+            **(
+                {
+                    "entitlement_field_ids": {
+                        band: rhna_fields[band] for band in ENTITLEMENT_BANDS
+                    }
+                }
+                if manages_entitlements
+                else {}
+            ),
         },
         "matched_count": len(source_rows),
         "cycle_counts": metadata["cycle_counts"],
@@ -1036,6 +1268,20 @@ def build_airtable_sync_plan(
             **after_aggregate,
             "total": sum(after_aggregate.values()),
         },
+        **(
+            {
+                "airtable_entitlement_aggregate_before": {
+                    **entitlement_before_aggregate,
+                    "total": sum(entitlement_before_aggregate.values()),
+                },
+                "source_entitlement_aggregate_after": {
+                    **entitlement_after_aggregate,
+                    "total": sum(entitlement_after_aggregate.values()),
+                },
+            }
+            if manages_entitlements
+            else {}
+        ),
         "blockers": blockers,
         "changes": changes,
         "verification_targets": verification_targets,
@@ -1126,6 +1372,7 @@ def summarize_airtable_sync_plan(plan: Mapping[str, object]) -> dict[str, object
         blocker_codes = sorted(
             str(item.get("code")) for item in blockers if isinstance(item, Mapping)
         )
+    entitlements = plan.get("source_entitlement_aggregate_after")
     return {
         "apply_eligible": plan.get("apply_eligible") is True,
         "matched_count": plan.get("matched_count"),
@@ -1136,6 +1383,13 @@ def summarize_airtable_sync_plan(plan: Mapping[str, object]) -> dict[str, object
             plan.get("source_aggregate_after", {}).get("total")
             if isinstance(plan.get("source_aggregate_after"), Mapping)
             else None
+        ),
+        # Reported apart from source_total because entitlements are never
+        # permits. Plans before config version 3 omit the key.
+        **(
+            {"source_entitlement_total": entitlements.get("total")}
+            if isinstance(entitlements, Mapping)
+            else {}
         ),
         "blocker_codes": blocker_codes,
         "plan_sha256": plan.get("plan_sha256"),

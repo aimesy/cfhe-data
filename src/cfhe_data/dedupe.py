@@ -1,8 +1,9 @@
 """Auditable deduplication for HCD APR permit snapshots.
 
-The public entry points are :func:`deduplicate_records` and
-:func:`deduplicate_rows`.  Every removed row receives exactly one named audit
-entry.  Ambiguous rows and every row in the selected latest APR year remain.
+The public entry points are :func:`deduplicate_records`,
+:func:`deduplicate_entitlements`, and :func:`deduplicate_rows`.  Every removed
+row receives exactly one named audit entry.  Ambiguous rows and every row in
+the selected latest APR year remain.
 """
 
 from __future__ import annotations
@@ -41,6 +42,7 @@ RULE_WEAK_PROJECT = "weak_project_snapshot"
 RULE_WEAK_DUAL_LOCATION = "weak_dual_location_snapshot"
 RULE_WEAK_PROJECT_AND_DUAL = "weak_project_and_dual_location_snapshot"
 RULE_TRANSFORMED_LOCATION = "weak_house_number_in_apn_transform"
+RULE_ENTITLEMENT_CARRIED = "entitlement_carried_forward_snapshot"
 
 RULES: tuple[str, ...] = (
     RULE_STRONG_LINKED,
@@ -54,6 +56,7 @@ RULES: tuple[str, ...] = (
     RULE_WEAK_PROJECT_AND_DUAL,
     RULE_TRANSFORMED_LOCATION,
 )
+ENTITLEMENT_RULES: tuple[str, ...] = (*RULES, RULE_ENTITLEMENT_CARRIED)
 
 StrongBlockKey = tuple[str, dt.date, str]
 IdKey = tuple[str, str]
@@ -103,6 +106,8 @@ def _safe_components(
     indices: Sequence[int],
     records: Sequence[PermitRecord],
     edge_function: EdgeFunction,
+    *,
+    check_addresses: bool = True,
 ) -> _ComponentAudit:
     if not indices:
         return _ComponentAudit((), (), 0)
@@ -138,7 +143,9 @@ def _safe_components(
         right_root = find(right_index)
         if left_root == right_root:
             continue
-        if not _components_compatible(members[left_root], members[right_root], records):
+        if check_addresses and not _components_compatible(
+            members[left_root], members[right_root], records
+        ):
             rejected_edges += 1
             continue
         if len(members[left_root]) < len(members[right_root]):
@@ -476,6 +483,166 @@ def _weak_candidate_removals(
     return removals
 
 
+def _carried_location_match(left: PermitRecord, right: PermitRecord) -> bool:
+    """Link two rows by a shared valid parcel or a compatible address."""
+
+    if (
+        _valid_apn(left)
+        and _valid_apn(right)
+        and (left.raw_apn == right.raw_apn or left.formatted_apn == right.formatted_apn)
+    ):
+        return True
+    return bool(
+        left.addresses
+        and right.addresses
+        and address_match_kind(left.addresses, right.addresses) is not None
+    )
+
+
+_CARRIED_CORROBORATION_FLOOR = 5
+
+
+def _carried_permit_corroborates(
+    left: PermitRecord,
+    right: PermitRecord,
+    corroboration: tuple[str, str],
+) -> bool:
+    """Link two rows that report the same building permit date and count."""
+
+    date_field, total_field = corroboration
+    if (left.reported_total or 0) < _CARRIED_CORROBORATION_FLOOR:
+        return False
+    left_row = left.raw_row
+    right_row = right.raw_row
+    left_date = str(left_row.get(date_field) or "").strip()
+    if not left_date or left_date != str(right_row.get(date_field) or "").strip():
+        return False
+    left_total = str(left_row.get(total_field) or "").strip()
+    return (
+        left_total.isdigit()
+        and int(left_total) > 0
+        and left_total == str(right_row.get(total_field) or "").strip()
+    )
+
+
+def _carried_entitlement_removals(
+    indices: Sequence[int],
+    records: Sequence[PermitRecord],
+    *,
+    corroboration: tuple[str, str] | None = None,
+) -> dict[int, _CandidateRemoval]:
+    """Find entitlements that a later APR re-reported under a new tracking ID.
+
+    A later APR may repeat a prior year's entitlement with its original
+    approval date. The rows then share the approval date and income bands but
+    fall in different strong blocks, so the permit rules keep both. Tracking
+    ID and project name are ignored here; the parcel or the address must link
+    the rows, and a parcel match overrides a changed address. Components
+    include rows an earlier rule removed, so the count guard sees every
+    report of the entitlement, and the caller removes only rows still active.
+    With ``corroboration``, rows of at least five units that repeat the same
+    building permit date and count also link without a location match.
+    """
+
+    blocks: dict[tuple[object, ...], list[int]] = defaultdict(list)
+    for index in indices:
+        record = records[index]
+        if record.permit_date is None:
+            continue
+        blocks[
+            (
+                record.jurisdiction,
+                record.permit_date,
+                record.categories,
+                record.reported_total,
+            )
+        ].append(index)
+
+    removals: dict[int, _CandidateRemoval] = {}
+    for block_indices in blocks.values():
+        if len({records[index].report_year for index in block_indices}) < 2:
+            continue
+
+        def edge(left_index: int, right_index: int) -> int | None:
+            left = records[left_index]
+            right = records[right_index]
+            if left.report_year == right.report_year:
+                return None
+            if _carried_location_match(left, right):
+                return 0
+            if corroboration is not None and _carried_permit_corroborates(
+                left, right, corroboration
+            ):
+                return 0
+            return None
+
+        component_audit = _safe_components(
+            block_indices, records, edge, check_addresses=False
+        )
+        for component in component_audit.matched_components:
+            by_year: dict[int, list[int]] = defaultdict(list)
+            for index in component:
+                by_year[records[index].report_year].append(index)
+            latest_year = max(by_year)
+            latest_indices = tuple(sorted(by_year[latest_year]))
+            earlier_counts = [
+                len(values) for year, values in by_year.items() if year != latest_year
+            ]
+            if len(latest_indices) < max(earlier_counts):
+                continue
+            latest_rows = [records[index] for index in latest_indices]
+            for year, year_indices in by_year.items():
+                if year == latest_year:
+                    continue
+                for index in year_indices:
+                    if len(latest_rows) > 1 and _sibling_permits_only(
+                        records[index], latest_rows
+                    ):
+                        continue
+                    removals[index] = _CandidateRemoval(
+                        latest_year, latest_indices, "approval_date_bands_and_location"
+                    )
+    return removals
+
+
+def _tracking_shape(value: str) -> tuple[str, str]:
+    cleaned = re.sub(r"\s+", "", value).upper()
+    prefix = re.match(r"[A-Z]*", cleaned)
+    return (prefix.group(0) if prefix else ""), re.sub(r"\d", "9", cleaned)
+
+
+def _sibling_permits_only(
+    removed: PermitRecord, latest_rows: Sequence[PermitRecord]
+) -> bool:
+    """Return whether the row links only by parcel to sibling permit numbers.
+
+    On a master parcel a later APR can list other permits of the same series
+    at other house numbers. A shared parcel alone does not show that those
+    rows carry this entitlement forward, so the row stays.
+    """
+
+    tracking = (removed.tracking_raw or "").strip()
+    if not tracking or not removed.addresses:
+        return False
+    direct = [row for row in latest_rows if _carried_location_match(removed, row)]
+    if not direct:
+        return False
+    for row in direct:
+        other = (row.tracking_raw or "").strip()
+        if (
+            not row.addresses
+            or address_match_kind(removed.addresses, row.addresses) is not None
+        ):
+            return False
+        if (
+            not other
+            or other == tracking
+            or _tracking_shape(other) != _tracking_shape(tracking)
+        ):
+            return False
+    return True
+
+
 def house_number_moved_from_apn_to_address(
     earlier: PermitRecord,
     latest: PermitRecord,
@@ -618,8 +785,18 @@ def _resolve_final_audit_lineage(
     )
 
 
-def deduplicate_records(records: Iterable[PermitRecord]) -> DedupResult:
-    """Apply the verified conservative and residual deduplication profile."""
+def deduplicate_records(
+    records: Iterable[PermitRecord],
+    *,
+    carried_entitlements: bool = False,
+    corroboration: tuple[str, str] | None = None,
+) -> DedupResult:
+    """Apply the verified conservative and residual deduplication profile.
+
+    With ``carried_entitlements``, a final pass also removes earlier rows that
+    a later APR re-reported as an entitlement under a new tracking ID. Permits
+    never take that pass. ``corroboration`` applies only to that pass.
+    """
 
     materialized = tuple(records)
     source_indices = [record.source_index for record in materialized]
@@ -627,6 +804,7 @@ def deduplicate_records(records: Iterable[PermitRecord]) -> DedupResult:
         raise ValueError("source_index must uniquely identify every record")
     active = set(range(len(materialized)))
     audits: list[DedupAuditEntry] = []
+    removed_toward: dict[int, tuple[int, ...]] = {}
 
     def remove(
         index: int,
@@ -639,6 +817,7 @@ def deduplicate_records(records: Iterable[PermitRecord]) -> DedupResult:
         if index not in active:
             return
         active.remove(index)
+        removed_toward[index] = tuple(retained_indices)
         audits.append(
             _audit_entry(
                 materialized[index],
@@ -955,6 +1134,86 @@ def deduplicate_records(records: Iterable[PermitRecord]) -> DedupResult:
                     details=(("evidence", "house_number_moved_from_apn"),),
                 )
 
+    def terminal_years(
+        indices: Sequence[int],
+        moved: Mapping[int, frozenset[int]] | None = None,
+    ) -> tuple[set[int], set[int]]:
+        """Return the final report years a lineage reaches, and moved rows on it."""
+
+        moved = moved or {}
+        years: set[int] = set()
+        hits: set[int] = set()
+        pending = list(indices)
+        seen: set[int] = set()
+        while pending:
+            index = pending.pop()
+            if index in seen:
+                continue
+            seen.add(index)
+            if index in moved:
+                hits.add(index)
+                years.update(moved[index])
+            elif index in active:
+                years.add(materialized[index].report_year)
+            else:
+                pending.extend(removed_toward[index])
+        return years, hits
+
+    if carried_entitlements:
+        carried = _carried_entitlement_removals(
+            range(len(materialized)), materialized, corroboration=corroboration
+        )
+        removed_from: dict[int, set[int]] = defaultdict(set)
+        for removed_index, targets in removed_toward.items():
+            for target in targets:
+                removed_from[target].add(removed_index)
+
+        def ancestors(indices: Iterable[int]) -> set[int]:
+            found: set[int] = set()
+            pending = list(indices)
+            while pending:
+                for parent in removed_from.get(pending.pop(), ()):
+                    if parent not in found:
+                        found.add(parent)
+                        pending.append(parent)
+            return found
+
+        # Settle later APR years first. A lineage only reaches later years, so
+        # each row's check then sees every move made to the rows it reaches.
+        by_year: dict[int, list[int]] = defaultdict(list)
+        for index in carried:
+            if index in active:
+                by_year[materialized[index].report_year].append(index)
+        for year in sorted(by_year, reverse=True):
+            moved: dict[int, frozenset[int]] = {}
+            for index in by_year[year]:
+                years, _hits = terminal_years(carried[index].retained_indices)
+                if len(years) == 1:
+                    moved[index] = frozenset(years)
+            # Move this year's rows together; drop every move that would end
+            # an earlier row's lineage in more than one report year.
+            while moved:
+                vetoed: set[int] = set()
+                for parent in ancestors(moved):
+                    years, hits = terminal_years(removed_toward[parent], moved)
+                    if len(years) != 1:
+                        vetoed.update(hits)
+                if not vetoed:
+                    break
+                for index in vetoed:
+                    del moved[index]
+            for index in sorted(moved, key=lambda i: materialized[i].source_index):
+                candidate = carried[index]
+                remove(
+                    index,
+                    rule=RULE_ENTITLEMENT_CARRIED,
+                    retained_year=candidate.retained_year,
+                    retained_indices=candidate.retained_indices,
+                    details=(("evidence", candidate.evidence),),
+                )
+                for target in candidate.retained_indices:
+                    removed_from[target].add(index)
+
     retained = tuple(
         record for index, record in enumerate(materialized) if index in active
     )
@@ -971,6 +1230,24 @@ def deduplicate(records: Iterable[PermitRecord]) -> DedupeResult:
     """Public alias for the record API used by ingestion pipelines."""
 
     return deduplicate_records(records)
+
+
+def deduplicate_entitlements(
+    records: Iterable[PermitRecord],
+    *,
+    corroboration: tuple[str, str] | None = None,
+) -> DedupeResult:
+    """Apply the permit profile, then the carried entitlement pass.
+
+    ``corroboration`` names the building permit date and count columns. When
+    given, two reports that share the approval date, bands, and a total of at
+    least five also link when both carry the same nonblank permit date and the
+    same positive permit count, even if the parcel and address changed.
+    """
+
+    return deduplicate_records(
+        records, carried_entitlements=True, corroboration=corroboration
+    )
 
 
 def deduplicate_rows(

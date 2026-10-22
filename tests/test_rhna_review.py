@@ -6,7 +6,7 @@ import json
 from copy import deepcopy
 
 import pytest
-from test_airtable_sync import CYCLE_POLICY, _source
+from test_airtable_sync import CYCLE_POLICY, _add_entitlements, _source
 
 from cfhe_data.rhna_review import build_table_b_review
 from cfhe_data.webflow import canonical_sha256
@@ -249,3 +249,13 @@ def test_malformed_workbook_is_a_source_error_in_the_report(tmp_path):
     assert result["compared_jurisdiction_count"] == 1
     assert not result["coverage_complete"]
     assert not result["ready_for_publication_review"]
+
+
+def test_entitlement_fields_do_not_change_the_table_b_review(tmp_path):
+    baseline, manifest = sample(tmp_path)
+    plain = review(tmp_path, baseline, manifest)
+    _add_entitlements(baseline)
+    assert review(tmp_path, baseline, manifest) == plain
+    baseline["metadata"]["entitlement_selected_units"] = 11
+    with pytest.raises(ValueError, match="do not reconcile"):
+        review(tmp_path, baseline, manifest)

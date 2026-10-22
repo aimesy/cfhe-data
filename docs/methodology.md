@@ -36,9 +36,61 @@ The residual rules require each earlier row to match at least one later snapshot
 
 The dashboard total is not a target for these rules. A difference from the dashboard is reported, not optimized away.
 
+## Entitlements
+
+The Airtable build also totals completed entitlements from the same Table A2 rows. It reads the unprefixed income columns, not the `BP_` permit columns, and uses the permit band names. Acutely low adds `ACUTELY_LOW_INCOME_DR` and `ACUTELY_LOW_INCOME_NDR`; extremely low, very low, low, and moderate add the deed restricted and not deed restricted columns of `EXTREMELY_LOW_INCOME`, `VLOW_INCOME`, `LOW_INCOME`, and `MOD_INCOME` the same way; above moderate is `ABOVE_MOD_INCOME` alone. The bands are exclusive, and `EXTR_LOW_INCOME_UNITS` is never added to any of them.
+
+Entitlement rows use the permit selection window. A dated row is included only when `ENT_APPROVE_DT1` falls between the jurisdiction’s HCD planning period start and the earlier of its period end and the selected cutoff. That period is the one the artifact declares, taken from the RHNA file or replaced by `config/airtable_cycles.json`; Airtable dates are never used. A row with a blank approval date and entitlement units is included by its APR reporting year when that year falls in the same interval. Permits and entitlements are selected separately in one pass over the file, so a row can contribute a permit, an entitlement, or both. On every selected row the bands must sum to `NO_ENTITLEMENTS`; a single mismatch stops the build, as a mismatch with `NO_BUILDING_PERMITS` does for permits.
+
+Entitlement records then run through the deduplication rules above in their own pass, blocked on the approval date in place of the permit date. A project whose permit and entitlement were reported in different APR years is therefore resolved separately for each activity.
+
+Entitlements then take one more pass that permits never take. A later APR sometimes repeats an earlier year’s entitlement with its original approval date under a new tracking identifier, so the rows fall in different blocks above and both survive. This pass links rows of one jurisdiction from different APR years that report the same approval date, the same income bands, and the same `NO_ENTITLEMENTS`, when the two rows share a valid APN or a compatible address; a row also joins through a chain of such links. When the entitlement totals at least five units, two such rows also link without a parcel or address match if both carry the same nonblank `BP_ISSUE_DT1` and the same positive `NO_BUILDING_PERMITS`, because a later APR that changes a project’s parcel or address still repeats its building permit. Project name, unit category, tenure, and unit identifiers are ignored, the tracking identifier matters only in the sibling check below, and a shared parcel links rows even when the address changed. Rows an earlier rule removed still count toward the linked component. The pass keeps every row from the latest APR year and removes the earlier rows only when that year has at least as many rows as each earlier year; otherwise it keeps the component whole. It also keeps an earlier row when removing it would leave any audit chain ending in more than one APR year. When the latest year holds more than one row, it keeps an earlier row whose only links to that year are a shared parcel with rows at other addresses whose tracking identifiers differ from its own but follow the same numbering pattern, as sibling permits on a subdivision’s master parcel do. The pass needs the exact approval date and income bands, so a later APR that moves the approval date or reallocates the bands of an earlier entitlement is not linked, and both reports remain in the totals. Its removals appear in the audit under `entitlement_carried_forward_snapshot`.
+
+Each `airtable_totals.json` row adds an `entitlement_` field for every band, `entitlement_total`, `undated_entitlements`, and `entitlement_data_status`. A jurisdiction with no selected entitlement row reports zeros and `no_selected_rows`. The metadata adds the selected, retained, removed, and undated entitlement counts. `airtable_entitlement_audit_summary.json` records the source columns, selection statistics, category totals, removals by rule, and invariants. The complete entitlement decision ledger and its compact review ledger name each row’s date `entitlement_date`. The review ledger is uploaded with the run, the audit summary is committed with the other processed files, and the complete ledger stays on the runner.
+
+The permit fields are rendered before the entitlement fields are merged. The build stops unless removing the entitlement fields reproduces that rendering byte for byte, so entitlements cannot change a permit total or `airtable_audit_summary.json`. The `jurisdiction_totals` build parses only the permit columns.
+
+## Quarterly series
+
+`airtable_series.json` gives every jurisdiction in the Airtable cycle policy one row for each calendar quarter from January 1, 2018, through December 31 of the cutoff year. The window is the same for every jurisdiction, whatever its planning period, so quarters before a cycle began are present too. One pass over Table A2 selects each stage by its own date column, and each stage takes its bands from its own columns:
+
+| Stage | Date | Count | Band columns |
+|---|---|---|---|
+| Entitlements | `ENT_APPROVE_DT1` | `NO_ENTITLEMENTS` | unprefixed income columns |
+| Building permits | `BP_ISSUE_DT1` | `NO_BUILDING_PERMITS` | `BP_` columns |
+| Completions | `CO_ISSUE_DT1` | `NO_OTHER_FORMS_OF_READINESS` | `CO_` columns |
+
+A row counts for a stage only when it reports units for that stage. A row with a blank date is selected by its APR reporting year, as in the cycle totals, but has no quarter. Its units appear in no row; the stage metadata lists them by jurisdiction under `undated_units_by_jurisdiction`.
+
+Each stage is deduplicated separately. Entitlements take the carried forward pass described above. Permits and completions take only the snapshot rules, as permits do in the cycle totals. The stage metadata records removals by rule.
+
+Each row carries these measures for every stage:
+
+| Measure | Units counted |
+|---|---|
+| `vli` | acutely low, extremely low, and very low income |
+| `li`, `mi`, `ami` | low, moderate, and above moderate income |
+| `total` | all units |
+| `deed_restricted` | the stage’s `_DR` band columns |
+| `sfd`, `sfa`, `2_to_4`, `5_plus`, `adu`, `mh` | all units on rows whose `UNIT_CAT` is `SFD`, `SFA`, `2 TO 4`, `5+`, `ADU`, or `MH` |
+| `sb35` | all units on rows whose `APPROVE_SB35` includes `Y`, `SB 35 (2017)`, `SB 423 (2023)`, or `SMAP` |
+| `sb9` | all units on rows labeled `SB 9 (2021) - DUPLEX IN SF ZONE` or `SB 9 (2021) - RESIDENTIAL LOT SPLIT` |
+| `ab2011` | all units on rows labeled `AB 2011 (2022)` |
+| `density_bonus` | all units on rows whose `DENSITY_BONUS_TOTAL` is above zero |
+
+A row with several labels counts once in each program column. `SB 4 (2023)` and `SB 6 (2022)` have no column. The metadata counts rows for every label and lists any label or unit category the build does not recognize. The density bonus column counts the whole project, not only its bonus units. A `DENSITY_BONUS_TOTAL` that cannot be parsed counts as zero and is reported in `density_bonus_unparsed_rows`. The program and unit columns are only as complete as each jurisdiction’s coding of those fields.
+
+`table_a2_rows` is the number of Table A2 rows the jurisdiction filed for that APR year, counted or not. Quarters are placed by activity date and flags by report year, so a later APR can fill quarters in a year that carries `no_apr_rows`. `data_flags` lists:
+
+- `no_apr_rows`, when the jurisdiction filed no Table A2 row of any kind for that APR year, so its zeros may mean a missing report rather than no activity;
+- `entitlement_dates_heaped` and its permit and completion counterparts, when the year has at least 10 dated rows for that stage and at least half of them share one date, which suggests a placeholder date; `metadata.heaping` lists each case;
+- `provisional_year`, on the cutoff year, which some jurisdictions have not filed and HCD revises as late reports arrive.
+
+The build stops unless every stage conserves rows and units through deduplication and its dated and undated units add up to its retained units. It then reconciles entitlements and permits with `airtable_totals.json`: for each jurisdiction, the dated quarters between its planning period start and the earlier of its period end and the cutoff must equal the published total minus the undated units. The two files must also record the same inputs and settings. A difference does not stop the build; it is written to `metadata.sync_blockers`, and the series sync refuses to write while any blocker remains. Completions have no cycle total and are not reconciled.
+
 ## Quality gates
 
-A build stops on a missing required column, duplicate header, malformed row, negative or fractional permit count, malformed planning period, or invalid nonblank permit date. The audit also checks:
+A build stops on a missing required column, duplicate header, malformed row, malformed planning period, or invalid nonblank permit, entitlement approval, or completion date. A build checks each date it reads on every row of a jurisdiction with a planning period, before applying the window, so a bad date stops the build even on a row that is never counted. On a selected row, a negative, fractional, or nonnumeric permit or entitlement count also stops the build, as do bands that do not sum to `NO_BUILDING_PERMITS`, `NO_ENTITLEMENTS`, or, in the quarterly series, `NO_OTHER_FORMS_OF_READINESS`. The audit also checks:
 
 - input selection equals retained rows plus removed rows;
 - every removed row resolves through an acyclic chain to at least one later retained snapshot;
