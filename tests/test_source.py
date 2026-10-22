@@ -106,6 +106,30 @@ def test_stable_manifest_preserves_retrieval_time_for_same_hash(tmp_path: Path) 
     assert manifest["sources"]["fixture"]["retrieved_at"] == "2026-08-20T00:00:00+00:00"
 
 
+def test_manifest_ignores_download_signature(tmp_path: Path) -> None:
+    def signed_opener(date: str, signature: str):
+        url = (
+            "https://bucket.example/data.csv?X-Amz-Algorithm=AWS4-HMAC-SHA256"
+            f"&X-Amz-Date={date}&X-Amz-Expires=60&X-Amz-Signature={signature}"
+            "&response-content-disposition=attachment%3B%20filename%3Ddata.csv"
+        )
+        return lambda *_args, **_kwargs: FakeResponse(b"A\n", url)
+
+    first = fetch_source(
+        spec(), tmp_path, opener=signed_opener("20261021T153700Z", "aa11")
+    )
+    second = fetch_source(
+        spec(), tmp_path, opener=signed_opener("20261022T153700Z", "bb22")
+    )
+
+    assert first.resolved_url == (
+        "https://bucket.example/data.csv"
+        "?response-content-disposition=attachment%3B%20filename%3Ddata.csv"
+    )
+    previous = stable_manifest([first])
+    assert stable_manifest([second], previous=previous) == previous
+
+
 def fetch_with_datastore(tmp_path: Path, fields: list[dict[str, object]]):
     def opener(request, **_kwargs):
         if request.full_url == "https://metadata":
