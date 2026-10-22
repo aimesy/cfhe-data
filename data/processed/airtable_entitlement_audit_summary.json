@@ -14,7 +14,7 @@
       "7th": 17
     },
     "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
-    "dedupe_profile": "audited-apr-snapshots-v3",
+    "dedupe_profile": "audited-apr-snapshots-v4",
     "entitlement_removed_row_count": 7877,
     "entitlement_removed_units": 28864,
     "entitlement_retained_row_count": 71074,
@@ -23,9 +23,9 @@
     "jurisdiction_count": 539,
     "last_updated": "2026-10-16",
     "provisional": false,
-    "removed_row_count": 32219,
-    "removed_units": 59697,
-    "retained_row_count": 279086,
+    "removed_row_count": 33521,
+    "removed_units": 63140,
+    "retained_row_count": 277784,
     "selected_row_count": 311305,
     "selected_units": 557387,
     "source_manifest_sha256": "9356b8672801b342f47b35a91f3d2486d2e7d5bfd1b3bbb27c3dd0dd72783022",
@@ -33,7 +33,7 @@
     "undated_permits": 46
   },
   "removed_by_rule": {
-    "entitlement_carried_forward_snapshot": {
+    "carried_forward_snapshot": {
       "categories": {
         "above_moderate": 2183,
         "acutely_low": 0,

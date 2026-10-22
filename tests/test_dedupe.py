@@ -6,7 +6,7 @@ from itertools import permutations
 import pytest
 
 from cfhe_data.dedupe import (
-    RULE_ENTITLEMENT_CARRIED,
+    RULE_CARRIED_FORWARD,
     RULE_STRONG_LINKED,
     RULE_STRONG_RELIABLE,
     RULE_STRONG_REUSED,
@@ -15,7 +15,7 @@ from cfhe_data.dedupe import (
     RULE_WEAK_LITERAL,
     RULE_WEAK_PROJECT,
     deduplicate,
-    deduplicate_entitlements,
+    deduplicate_carried_forward,
     deduplicate_rows,
     house_number_moved_from_apn_to_address,
 )
@@ -410,11 +410,11 @@ def test_carried_entitlement_with_a_new_tracking_id_keeps_the_latest_report() ->
     )
 
     assert not deduplicate(records).removed
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert [record.source_index for record in result.retained] == [31]
     assert result.removed_source_indices == {30}
-    assert result.audit[0].rule == RULE_ENTITLEMENT_CARRIED
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD
     assert result.audit[0].retained_source_indices == (31,)
     assert result.audit[0].retained_report_year == 2024
 
@@ -431,10 +431,10 @@ def test_carried_entitlement_links_on_the_parcel_when_the_address_changes() -> N
     )
 
     assert not deduplicate(records).removed
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert [record.source_index for record in result.retained] == [32]
-    assert {entry.rule for entry in result.audit} == {RULE_ENTITLEMENT_CARRIED}
+    assert {entry.rule for entry in result.audit} == {RULE_CARRIED_FORWARD}
     assert all(entry.retained_source_indices == (32,) for entry in result.audit)
 
 
@@ -449,10 +449,10 @@ def test_carried_entitlement_links_on_the_address_without_a_parcel() -> None:
         ),
     )
 
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert result.removed_source_indices == {30}
-    assert result.audit[0].rule == RULE_ENTITLEMENT_CARRIED
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD
 
 
 @pytest.mark.parametrize(
@@ -472,7 +472,7 @@ def test_carried_entitlement_requires_every_signal(changes: dict[str, object]) -
         _carried(**{"YEAR": "2024", "JURS_TRACKING_ID": "ENT-202", **changes}),
     )
 
-    assert not deduplicate_entitlements(records).removed
+    assert not deduplicate_carried_forward(records).removed
 
 
 def test_carried_entitlement_keeps_rows_without_an_approval_date() -> None:
@@ -481,7 +481,7 @@ def test_carried_entitlement_keeps_rows_without_an_approval_date() -> None:
         _carried(YEAR="2024", JURS_TRACKING_ID="ENT-202", BP_ISSUE_DT1=""),
     )
 
-    assert not deduplicate_entitlements(records).removed
+    assert not deduplicate_carried_forward(records).removed
 
 
 def test_carried_entitlement_is_guarded_when_the_later_report_has_fewer_rows() -> None:
@@ -491,7 +491,7 @@ def test_carried_entitlement_is_guarded_when_the_later_report_has_fewer_rows() -
         _carried(YEAR="2024", JURS_TRACKING_ID="ENT-202", STREET_ADDRESS=""),
     )
 
-    assert not deduplicate_entitlements(records).removed
+    assert not deduplicate_carried_forward(records).removed
 
 
 def test_carried_entitlement_guard_counts_rows_an_earlier_rule_removed() -> None:
@@ -512,7 +512,7 @@ def test_carried_entitlement_guard_counts_rows_an_earlier_rule_removed() -> None
     )
 
     permit_result = deduplicate(records)
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert len(permit_result.removed) == 1
     assert result.removed_source_indices == permit_result.removed_source_indices
@@ -528,14 +528,14 @@ def test_carried_entitlement_resolves_through_a_row_an_earlier_rule_removed() ->
     )
 
     permit_result = deduplicate(records)
-    forward = deduplicate_entitlements(records)
-    reversed_result = deduplicate_entitlements(tuple(reversed(records)))
-    repeated = deduplicate_entitlements(forward.retained)
+    forward = deduplicate_carried_forward(records)
+    reversed_result = deduplicate_carried_forward(tuple(reversed(records)))
+    repeated = deduplicate_carried_forward(forward.retained)
 
     assert permit_result.removed_source_indices == {31}
     assert forward.removed_source_indices == {30, 31}
     assert {entry.source_index: entry.rule for entry in forward.audit}[30] == (
-        RULE_ENTITLEMENT_CARRIED
+        RULE_CARRIED_FORWARD
     )
     assert all(entry.retained_source_indices == (32,) for entry in forward.audit)
     assert forward.removed_source_indices == reversed_result.removed_source_indices
@@ -558,7 +558,7 @@ def test_carried_entitlement_keeps_a_row_whose_lineage_would_end_in_two_years() 
     )
 
     permit_result = deduplicate(records)
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert permit_result.removed_source_indices == {31}
     assert result.removed_source_indices == {31}
@@ -582,7 +582,7 @@ def _outcomes(records: tuple[PermitRecord, ...]) -> set[tuple[object, ...]]:
 
     found: set[tuple[object, ...]] = set()
     for order in permutations(records):
-        result = deduplicate_entitlements(order)
+        result = deduplicate_carried_forward(order)
         found.add(
             tuple(
                 sorted(
@@ -625,7 +625,7 @@ def test_carried_entitlement_settles_later_years_before_earlier_rows() -> None:
         (
             (31, RULE_STRONG_LINKED, (35,)),
             (32, RULE_STRONG_LINKED, (34,)),
-            (33, RULE_ENTITLEMENT_CARRIED, (35,)),
+            (33, RULE_CARRIED_FORWARD, (35,)),
         )
     }
 
@@ -645,7 +645,7 @@ def test_carried_entitlement_keeps_order_independent_lineage_through_a_split() -
 
     assert _outcomes(records) == {
         (
-            (30, RULE_ENTITLEMENT_CARRIED, (32, 33)),
+            (30, RULE_CARRIED_FORWARD, (32, 33)),
             (31, RULE_STRONG_LINKED, (32, 33)),
         )
     }
@@ -682,7 +682,7 @@ def test_carried_entitlement_keeps_a_row_whose_only_links_are_sibling_permits() 
     )
 
     assert not deduplicate(records).removed
-    assert not deduplicate_entitlements(records).removed
+    assert not deduplicate_carried_forward(records).removed
 
 
 def test_carried_entitlement_links_through_an_intermediate_report() -> None:
@@ -698,10 +698,10 @@ def test_carried_entitlement_links_through_an_intermediate_report() -> None:
         ),
     )
 
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert result.removed_source_indices == {30, 31}
-    assert all(entry.rule == RULE_ENTITLEMENT_CARRIED for entry in result.audit)
+    assert all(entry.rule == RULE_CARRIED_FORWARD for entry in result.audit)
 
 
 def test_carried_entitlement_ignores_a_unit_conflict_on_the_parcel() -> None:
@@ -714,10 +714,10 @@ def test_carried_entitlement_ignores_a_unit_conflict_on_the_parcel() -> None:
         ),
     )
 
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert result.removed_source_indices == {30}
-    assert result.audit[0].rule == RULE_ENTITLEMENT_CARRIED
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD
 
 
 @pytest.mark.parametrize("changes", [{"TENURE": "Owner"}, {"UNIT_CAT": "SFD"}])
@@ -729,10 +729,10 @@ def test_carried_entitlement_ignores_unit_category_and_tenure(
         _carried(**{"YEAR": "2024", "JURS_TRACKING_ID": "ENT-202", **changes}),
     )
 
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert result.removed_source_indices == {30}
-    assert result.audit[0].rule == RULE_ENTITLEMENT_CARRIED
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD
 
 
 def test_carried_entitlement_lone_parcel_row_still_overrides_the_address() -> None:
@@ -754,7 +754,7 @@ def test_carried_entitlement_lone_parcel_row_still_overrides_the_address() -> No
         ),
     )
 
-    result = deduplicate_entitlements(records)
+    result = deduplicate_carried_forward(records)
 
     assert result.removed_source_indices == {30}
-    assert result.audit[0].rule == RULE_ENTITLEMENT_CARRIED
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD

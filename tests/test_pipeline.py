@@ -1106,7 +1106,7 @@ def test_carried_entitlement_under_a_new_tracking_id_counts_once(
     audit = json.loads(artifacts.entitlement_audit_summary.read_text(encoding="utf-8"))
     assert {
         rule: stats["rows"] for rule, stats in audit["removed_by_rule"].items()
-    } == {"entitlement_carried_forward_snapshot": 1}
+    } == {"carried_forward_snapshot": 1}
     assert all(audit["invariants"].values())
     entitlement_ledger = [
         json.loads(line)
@@ -1119,6 +1119,48 @@ def test_carried_entitlement_under_a_new_tracking_id_counts_once(
         for row in entitlement_ledger
         if row["decision"] == "removed_earlier_snapshot"
     ] == [3]
+
+
+def test_carried_permit_under_a_new_tracking_id_counts_once(tmp_path: Path) -> None:
+    carried = [
+        permit_row(JURS_TRACKING_ID="BP-2024-01", YEAR="2024"),
+        permit_row(JURS_TRACKING_ID="B25-0042", YEAR="2025", PROJECT_NAME="Tract 5045"),
+    ]
+    inputs = _airtable_inputs(tmp_path / "carried", carried)
+    artifacts = build_airtable_artifacts(**inputs)
+    baseline = build_airtable_artifacts(
+        **_airtable_inputs(tmp_path / "baseline", carried[1:])
+    )
+
+    assert (
+        artifacts.selected_rows,
+        artifacts.retained_rows,
+        artifacts.removed_rows,
+        artifacts.total_units,
+    ) == (2, 1, 1, 1)
+    payload = json.loads(artifacts.jurisdiction_json.read_text(encoding="utf-8"))
+    baseline_payload = json.loads(
+        baseline.jurisdiction_json.read_text(encoding="utf-8")
+    )
+    assert payload["jurisdictions"] == baseline_payload["jurisdictions"]
+    audit = json.loads(artifacts.audit_summary.read_text(encoding="utf-8"))
+    assert {
+        rule: stats["rows"] for rule, stats in audit["removed_by_rule"].items()
+    } == {"carried_forward_snapshot": 1}
+
+    totals = build_artifacts(
+        **{key: value for key, value in inputs.items() if key != "cycle_policy_path"}
+        | {
+            "output_schema_path": OUTPUT_SCHEMA,
+            "output_dir": tmp_path / "sixth" / "out",
+            "audit_dir": tmp_path / "sixth" / "audit",
+        }
+    )
+    assert (totals.selected_rows, totals.retained_rows, totals.total_units) == (
+        2,
+        1,
+        1,
+    )
 
 
 def test_jurisdiction_without_entitlements_reports_zero_entitlement_fields(

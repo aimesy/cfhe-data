@@ -79,7 +79,7 @@
       "very_low": 155
     },
     {
-      "above_moderate": 263,
+      "above_moderate": 258,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -95,14 +95,14 @@
       "jurisdiction": "Alameda County (Unincorporated)",
       "jurisdiction_key": "ALAMEDA COUNTY",
       "last_updated": "2026-10-16",
-      "low": 205,
-      "moderate": 85,
+      "low": 162,
+      "moderate": 84,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 750,
+      "total": 664,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 197
+      "very_low": 160
     },
     {
       "above_moderate": 190,
@@ -303,17 +303,17 @@
       "jurisdiction": "American Canyon",
       "jurisdiction_key": "AMERICAN CANYON",
       "last_updated": "2026-10-16",
-      "low": 7,
+      "low": 6,
       "moderate": 1,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 507,
+      "total": 505,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 12
+      "very_low": 11
     },
     {
-      "above_moderate": 2148,
+      "above_moderate": 2131,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -330,16 +330,16 @@
       "jurisdiction_key": "ANAHEIM",
       "last_updated": "2026-10-16",
       "low": 282,
-      "moderate": 254,
+      "moderate": 252,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 3229,
+      "total": 3210,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 440
     },
     {
-      "above_moderate": 99,
+      "above_moderate": 95,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -359,13 +359,13 @@
       "moderate": 0,
       "period_end": "2028-04-15",
       "period_start": "2020-04-15",
-      "total": 99,
+      "total": 95,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
     },
     {
-      "above_moderate": 20,
+      "above_moderate": 16,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -385,7 +385,7 @@
       "moderate": 0,
       "period_end": "2027-06-15",
       "period_start": "2019-06-15",
-      "total": 22,
+      "total": 18,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -781,7 +781,7 @@
       "very_low": 96
     },
     {
-      "above_moderate": 396,
+      "above_moderate": 387,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -801,7 +801,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 487,
+      "total": 478,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -859,7 +859,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 1723,
+      "above_moderate": 1674,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -879,7 +879,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 1723,
+      "total": 1674,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -937,7 +937,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 313,
+      "above_moderate": 306,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -957,7 +957,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 313,
+      "total": 306,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -1093,7 +1093,7 @@
       "very_low": 11
     },
     {
-      "above_moderate": 96,
+      "above_moderate": 95,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -1113,7 +1113,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 96,
+      "total": 95,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -1977,7 +1977,7 @@
       "very_low": 391
     },
     {
-      "above_moderate": 1821,
+      "above_moderate": 1795,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -1997,7 +1997,7 @@
       "moderate": 26,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 1857,
+      "total": 1831,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -2514,10 +2514,10 @@
       "jurisdiction_key": "CONTRA COSTA COUNTY",
       "last_updated": "2026-10-16",
       "low": 131,
-      "moderate": 207,
+      "moderate": 206,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 929,
+      "total": 928,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 91
@@ -2575,7 +2575,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 1044,
+      "above_moderate": 1040,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -2595,7 +2595,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 1096,
+      "total": 1092,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 52
@@ -2721,11 +2721,11 @@
       "jurisdiction": "Covina",
       "jurisdiction_key": "COVINA",
       "last_updated": "2026-10-16",
-      "low": 54,
+      "low": 53,
       "moderate": 190,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 626,
+      "total": 625,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 61
@@ -2757,7 +2757,7 @@
       "very_low": 70
     },
     {
-      "above_moderate": 118,
+      "above_moderate": 117,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -2777,7 +2777,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 258,
+      "total": 257,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 140
@@ -2835,7 +2835,7 @@
       "very_low": 41
     },
     {
-      "above_moderate": 558,
+      "above_moderate": 543,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -2855,7 +2855,7 @@
       "moderate": 46,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 638,
+      "total": 623,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 26
@@ -2939,7 +2939,7 @@
       "very_low": 26
     },
     {
-      "above_moderate": 1016,
+      "above_moderate": 811,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -2956,13 +2956,13 @@
       "jurisdiction_key": "DAVIS",
       "last_updated": "2026-10-16",
       "low": 2,
-      "moderate": 461,
+      "moderate": 352,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 1525,
+      "total": 1193,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 46
+      "very_low": 28
     },
     {
       "above_moderate": 41,
@@ -2991,7 +2991,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 109,
+      "above_moderate": 108,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -3007,14 +3007,14 @@
       "jurisdiction": "Del Norte County (Unincorporated)",
       "jurisdiction_key": "DEL NORTE COUNTY",
       "last_updated": "2026-10-16",
-      "low": 26,
+      "low": 25,
       "moderate": 80,
       "period_end": "2030-09-15",
       "period_start": "2022-09-15",
-      "total": 237,
+      "total": 234,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 18
+      "very_low": 17
     },
     {
       "above_moderate": 2,
@@ -3043,7 +3043,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 232,
+      "above_moderate": 231,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -3063,7 +3063,7 @@
       "moderate": 0,
       "period_end": "2031-12-31",
       "period_start": "2023-12-31",
-      "total": 232,
+      "total": 231,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -3423,11 +3423,11 @@
       "jurisdiction": "El Centro",
       "jurisdiction_key": "EL CENTRO",
       "last_updated": "2026-10-16",
-      "low": 247,
-      "moderate": 108,
+      "low": 245,
+      "moderate": 107,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 522,
+      "total": 519,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 129
@@ -3693,7 +3693,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 169,
+      "above_moderate": 164,
       "acutely_low": 6,
       "cycle": "6th",
       "data_status": "reported",
@@ -3713,7 +3713,7 @@
       "moderate": 57,
       "period_end": "2027-08-31",
       "period_start": "2019-08-31",
-      "total": 501,
+      "total": 496,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 154
@@ -3953,7 +3953,7 @@
       "very_low": 4
     },
     {
-      "above_moderate": 31,
+      "above_moderate": 29,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -3970,10 +3970,10 @@
       "jurisdiction_key": "FORT BRAGG",
       "last_updated": "2026-10-16",
       "low": 59,
-      "moderate": 72,
+      "moderate": 71,
       "period_end": "2027-08-15",
       "period_start": "2019-08-15",
-      "total": 189,
+      "total": 186,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 27
@@ -4187,7 +4187,7 @@
       "very_low": 6
     },
     {
-      "above_moderate": 825,
+      "above_moderate": 823,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -4203,11 +4203,11 @@
       "jurisdiction": "Fullerton",
       "jurisdiction_key": "FULLERTON",
       "last_updated": "2026-10-16",
-      "low": 205,
+      "low": 204,
       "moderate": 78,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 1373,
+      "total": 1370,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 231
@@ -4317,7 +4317,7 @@
       "very_low": 33
     },
     {
-      "above_moderate": 1683,
+      "above_moderate": 1662,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -4337,7 +4337,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 2267,
+      "total": 2246,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 243
@@ -4551,7 +4551,7 @@
       "very_low": 19
     },
     {
-      "above_moderate": 203,
+      "above_moderate": 194,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -4567,11 +4567,11 @@
       "jurisdiction": "Grover Beach",
       "jurisdiction_key": "GROVER BEACH",
       "last_updated": "2026-10-16",
-      "low": 60,
-      "moderate": 24,
+      "low": 55,
+      "moderate": 17,
       "period_end": "2028-12-31",
       "period_start": "2020-12-31",
-      "total": 322,
+      "total": 301,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 10
@@ -4681,7 +4681,7 @@
       "very_low": 9
     },
     {
-      "above_moderate": 74,
+      "above_moderate": 73,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -4701,7 +4701,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 74,
+      "total": 73,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -4785,7 +4785,7 @@
       "very_low": 83
     },
     {
-      "above_moderate": 1454,
+      "above_moderate": 1388,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -4802,10 +4802,10 @@
       "jurisdiction_key": "HEMET",
       "last_updated": "2026-10-16",
       "low": 0,
-      "moderate": 113,
+      "moderate": 109,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 1567,
+      "total": 1497,
       "undated_entitlements": 0,
       "undated_permits": 1,
       "very_low": 0
@@ -4889,7 +4889,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 44,
+      "above_moderate": 35,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -4909,10 +4909,10 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 54,
+      "total": 44,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 10
+      "very_low": 9
     },
     {
       "above_moderate": 189,
@@ -5305,7 +5305,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 633,
+      "above_moderate": 496,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -5325,10 +5325,10 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 647,
+      "total": 503,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 14
+      "very_low": 7
     },
     {
       "above_moderate": 58,
@@ -5357,7 +5357,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 130,
+      "above_moderate": 126,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -5377,7 +5377,7 @@
       "moderate": 0,
       "period_end": "2029-09-15",
       "period_start": "2021-09-15",
-      "total": 130,
+      "total": 126,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -5685,11 +5685,11 @@
       "jurisdiction": "La Habra",
       "jurisdiction_key": "LA HABRA",
       "last_updated": "2026-10-16",
-      "low": 169,
+      "low": 167,
       "moderate": 32,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 344,
+      "total": 342,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 8
@@ -5747,7 +5747,7 @@
       "very_low": 24
     },
     {
-      "above_moderate": 90,
+      "above_moderate": 88,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -5767,7 +5767,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 90,
+      "total": 88,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -5903,7 +5903,7 @@
       "very_low": 25
     },
     {
-      "above_moderate": 411,
+      "above_moderate": 377,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -5923,7 +5923,7 @@
       "moderate": 43,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 454,
+      "total": 420,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -6007,7 +6007,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 226,
+      "above_moderate": 208,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6023,11 +6023,11 @@
       "jurisdiction": "Lake County (Unincorporated)",
       "jurisdiction_key": "LAKE COUNTY",
       "last_updated": "2026-10-16",
-      "low": 146,
-      "moderate": 96,
+      "low": 77,
+      "moderate": 88,
       "period_end": "2027-08-15",
       "period_start": "2019-08-15",
-      "total": 493,
+      "total": 398,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 25
@@ -6111,7 +6111,7 @@
       "very_low": 56
     },
     {
-      "above_moderate": 139,
+      "above_moderate": 135,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6127,14 +6127,14 @@
       "jurisdiction": "Lakewood",
       "jurisdiction_key": "LAKEWOOD",
       "last_updated": "2026-10-16",
-      "low": 213,
-      "moderate": 21,
+      "low": 210,
+      "moderate": 20,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 509,
+      "total": 498,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 136
+      "very_low": 133
     },
     {
       "above_moderate": 1798,
@@ -6336,10 +6336,10 @@
       "jurisdiction_key": "LINCOLN",
       "last_updated": "2026-10-16",
       "low": 158,
-      "moderate": 738,
+      "moderate": 737,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 3257,
+      "total": 3256,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 39
@@ -6397,7 +6397,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 685,
+      "above_moderate": 446,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6413,14 +6413,14 @@
       "jurisdiction": "Livermore",
       "jurisdiction_key": "LIVERMORE",
       "last_updated": "2026-10-16",
-      "low": 59,
-      "moderate": 268,
+      "low": 45,
+      "moderate": 236,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 1153,
+      "total": 854,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 102
+      "very_low": 88
     },
     {
       "above_moderate": 4,
@@ -6527,7 +6527,7 @@
       "very_low": 3
     },
     {
-      "above_moderate": 137,
+      "above_moderate": 136,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6547,7 +6547,7 @@
       "moderate": 34,
       "period_end": "2031-02-15",
       "period_start": "2023-02-15",
-      "total": 205,
+      "total": 204,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 3
@@ -6579,7 +6579,7 @@
       "very_low": 340
     },
     {
-      "above_moderate": 60,
+      "above_moderate": 59,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6595,11 +6595,11 @@
       "jurisdiction": "Loomis",
       "jurisdiction_key": "LOOMIS",
       "last_updated": "2026-10-16",
-      "low": 26,
-      "moderate": 36,
+      "low": 23,
+      "moderate": 35,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 122,
+      "total": 117,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -6683,7 +6683,7 @@
       "very_low": 19
     },
     {
-      "above_moderate": 70719,
+      "above_moderate": 69898,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6699,14 +6699,14 @@
       "jurisdiction": "Los Angeles",
       "jurisdiction_key": "LOS ANGELES",
       "last_updated": "2026-10-16",
-      "low": 10075,
-      "moderate": 1488,
+      "low": 10013,
+      "moderate": 1472,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 88266,
+      "total": 87364,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 4320
+      "very_low": 4317
     },
     {
       "above_moderate": 9420,
@@ -6761,7 +6761,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 64,
+      "above_moderate": 61,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -6777,14 +6777,14 @@
       "jurisdiction": "Los Gatos",
       "jurisdiction_key": "LOS GATOS",
       "last_updated": "2026-10-16",
-      "low": 46,
-      "moderate": 38,
+      "low": 43,
+      "moderate": 34,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 197,
+      "total": 184,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 49
+      "very_low": 46
     },
     {
       "above_moderate": 0,
@@ -7021,7 +7021,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 165,
+      "above_moderate": 164,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7037,17 +7037,17 @@
       "jurisdiction": "Marin County (Unincorporated)",
       "jurisdiction_key": "MARIN COUNTY",
       "last_updated": "2026-10-16",
-      "low": 88,
+      "low": 87,
       "moderate": 41,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 355,
+      "total": 353,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 60
     },
     {
-      "above_moderate": 351,
+      "above_moderate": 348,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7067,7 +7067,7 @@
       "moderate": 56,
       "period_end": "2031-12-15",
       "period_start": "2023-12-15",
-      "total": 407,
+      "total": 404,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -7099,7 +7099,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 69,
+      "above_moderate": 68,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7119,7 +7119,7 @@
       "moderate": 19,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 137,
+      "total": 136,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 19
@@ -7255,7 +7255,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 4107,
+      "above_moderate": 4106,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7275,7 +7275,7 @@
       "moderate": 38,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 4175,
+      "total": 4174,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 9
@@ -7307,7 +7307,7 @@
       "very_low": 120
     },
     {
-      "above_moderate": 665,
+      "above_moderate": 664,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7327,7 +7327,7 @@
       "moderate": 2,
       "period_end": "2032-01-31",
       "period_start": "2024-01-31",
-      "total": 927,
+      "total": 926,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 180
@@ -7437,7 +7437,7 @@
       "very_low": 59
     },
     {
-      "above_moderate": 193,
+      "above_moderate": 186,
       "acutely_low": 5,
       "cycle": "6th",
       "data_status": "reported",
@@ -7457,7 +7457,7 @@
       "moderate": 5,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 249,
+      "total": 242,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 11
@@ -7515,7 +7515,7 @@
       "very_low": 3
     },
     {
-      "above_moderate": 45,
+      "above_moderate": 44,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7531,11 +7531,11 @@
       "jurisdiction": "Mono County (Unincorporated)",
       "jurisdiction_key": "MONO COUNTY",
       "last_updated": "2026-10-16",
-      "low": 20,
+      "low": 19,
       "moderate": 27,
       "period_end": "2027-08-15",
       "period_start": "2019-08-15",
-      "total": 127,
+      "total": 125,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 21
@@ -7593,7 +7593,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 1224,
+      "above_moderate": 1085,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7613,7 +7613,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 1224,
+      "total": 1085,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -7645,7 +7645,7 @@
       "very_low": 11
     },
     {
-      "above_moderate": 779,
+      "above_moderate": 773,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7665,7 +7665,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 841,
+      "total": 835,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 19
@@ -7723,7 +7723,7 @@
       "very_low": 8
     },
     {
-      "above_moderate": 219,
+      "above_moderate": 207,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7743,7 +7743,7 @@
       "moderate": 34,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 308,
+      "total": 296,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 4
@@ -7765,14 +7765,14 @@
       "jurisdiction": "Moorpark",
       "jurisdiction_key": "MOORPARK",
       "last_updated": "2026-10-16",
-      "low": 159,
+      "low": 157,
       "moderate": 45,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 358,
+      "total": 353,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 82
+      "very_low": 79
     },
     {
       "above_moderate": 0,
@@ -7931,7 +7931,7 @@
       "very_low": 259
     },
     {
-      "above_moderate": 3070,
+      "above_moderate": 2840,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -7947,11 +7947,11 @@
       "jurisdiction": "Murrieta",
       "jurisdiction_key": "MURRIETA",
       "last_updated": "2026-10-16",
-      "low": 814,
+      "low": 675,
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 3919,
+      "total": 3550,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 35
@@ -8035,7 +8035,7 @@
       "very_low": 97
     },
     {
-      "above_moderate": 9,
+      "above_moderate": 8,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -8052,10 +8052,10 @@
       "jurisdiction_key": "NEEDLES",
       "last_updated": "2026-10-16",
       "low": 0,
-      "moderate": 7,
+      "moderate": 6,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 16,
+      "total": 14,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -8191,7 +8191,7 @@
       "very_low": 48
     },
     {
-      "above_moderate": 124,
+      "above_moderate": 123,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -8211,7 +8211,7 @@
       "moderate": 3,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 140,
+      "total": 139,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 6
@@ -8347,7 +8347,7 @@
       "very_low": 3
     },
     {
-      "above_moderate": 2105,
+      "above_moderate": 2089,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -8367,13 +8367,13 @@
       "moderate": 490,
       "period_end": "2029-04-30",
       "period_start": "2021-04-30",
-      "total": 2994,
+      "total": 2976,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 188
+      "very_low": 186
     },
     {
-      "above_moderate": 96,
+      "above_moderate": 85,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -8393,7 +8393,7 @@
       "moderate": 14,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 112,
+      "total": 101,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 1
@@ -8581,7 +8581,7 @@
       "very_low": 172
     },
     {
-      "above_moderate": 920,
+      "above_moderate": 893,
       "acutely_low": 2,
       "cycle": "6th",
       "data_status": "reported",
@@ -8597,14 +8597,14 @@
       "jurisdiction": "Oxnard",
       "jurisdiction_key": "OXNARD",
       "last_updated": "2026-10-16",
-      "low": 777,
-      "moderate": 93,
+      "low": 734,
+      "moderate": 80,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 2048,
+      "total": 1949,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 255
+      "very_low": 239
     },
     {
       "above_moderate": 5,
@@ -9127,7 +9127,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 540,
+      "above_moderate": 535,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -9143,11 +9143,11 @@
       "jurisdiction": "Placentia",
       "jurisdiction_key": "PLACENTIA",
       "last_updated": "2026-10-16",
-      "low": 128,
-      "moderate": 36,
+      "low": 64,
+      "moderate": 33,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 704,
+      "total": 632,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -9612,13 +9612,13 @@
       "jurisdiction_key": "RANCHO SANTA MARGARITA",
       "last_updated": "2026-10-16",
       "low": 1,
-      "moderate": 2,
+      "moderate": 1,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 8,
+      "total": 6,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 5
+      "very_low": 4
     },
     {
       "above_moderate": 2,
@@ -9647,7 +9647,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 640,
+      "above_moderate": 603,
       "acutely_low": 1,
       "cycle": "6th",
       "data_status": "reported",
@@ -9664,10 +9664,10 @@
       "jurisdiction_key": "REDDING",
       "last_updated": "2026-10-16",
       "low": 245,
-      "moderate": 265,
+      "moderate": 221,
       "period_end": "2028-04-15",
       "period_start": "2020-04-15",
-      "total": 1431,
+      "total": 1350,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 280
@@ -9985,7 +9985,7 @@
       "very_low": 22
     },
     {
-      "above_moderate": 7751,
+      "above_moderate": 7708,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -10001,11 +10001,11 @@
       "jurisdiction": "Riverside County (Unincorporated)",
       "jurisdiction_key": "RIVERSIDE COUNTY",
       "last_updated": "2026-10-16",
-      "low": 316,
+      "low": 315,
       "moderate": 131,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 8198,
+      "total": 8154,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -10063,7 +10063,7 @@
       "very_low": 9
     },
     {
-      "above_moderate": 8,
+      "above_moderate": 7,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -10080,10 +10080,10 @@
       "jurisdiction_key": "ROLLING HILLS",
       "last_updated": "2026-10-16",
       "low": 0,
-      "moderate": 4,
+      "moderate": 2,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 12,
+      "total": 9,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -10105,11 +10105,11 @@
       "jurisdiction": "Rolling Hills Estates",
       "jurisdiction_key": "ROLLING HILLS ESTATES",
       "last_updated": "2026-10-16",
-      "low": 14,
+      "low": 12,
       "moderate": 2,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 31,
+      "total": 29,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 3
@@ -10183,14 +10183,14 @@
       "jurisdiction": "Ross",
       "jurisdiction_key": "ROSS",
       "last_updated": "2026-10-16",
-      "low": 12,
-      "moderate": 11,
+      "low": 11,
+      "moderate": 10,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 41,
+      "total": 37,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 10
+      "very_low": 8
     },
     {
       "above_moderate": 3613,
@@ -10209,11 +10209,11 @@
       "jurisdiction": "Sacramento",
       "jurisdiction_key": "SACRAMENTO",
       "last_updated": "2026-10-16",
-      "low": 3300,
-      "moderate": 4079,
+      "low": 3298,
+      "moderate": 4077,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 12962,
+      "total": 12958,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 1760
@@ -10557,7 +10557,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 51,
+      "above_moderate": 50,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -10573,11 +10573,11 @@
       "jurisdiction": "San Fernando",
       "jurisdiction_key": "SAN FERNANDO",
       "last_updated": "2026-10-16",
-      "low": 125,
-      "moderate": 55,
+      "low": 113,
+      "moderate": 54,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 235,
+      "total": 221,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 4
@@ -10609,7 +10609,7 @@
       "very_low": 1427
     },
     {
-      "above_moderate": 175,
+      "above_moderate": 163,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -10625,11 +10625,11 @@
       "jurisdiction": "San Gabriel",
       "jurisdiction_key": "SAN GABRIEL",
       "last_updated": "2026-10-16",
-      "low": 268,
+      "low": 266,
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 443,
+      "total": 429,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -11328,10 +11328,10 @@
       "jurisdiction_key": "SANTA FE SPRINGS",
       "last_updated": "2026-10-16",
       "low": 41,
-      "moderate": 19,
+      "moderate": 15,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 197,
+      "total": 193,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 94
@@ -11545,7 +11545,7 @@
       "very_low": 36
     },
     {
-      "above_moderate": 23,
+      "above_moderate": 18,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -11562,10 +11562,10 @@
       "jurisdiction_key": "SEAL BEACH",
       "last_updated": "2026-10-16",
       "low": 0,
-      "moderate": 11,
+      "moderate": 10,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 34,
+      "total": 28,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -11753,7 +11753,7 @@
       "very_low": 1
     },
     {
-      "above_moderate": 50,
+      "above_moderate": 41,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -11769,17 +11769,17 @@
       "jurisdiction": "Sierra Madre",
       "jurisdiction_key": "SIERRA MADRE",
       "last_updated": "2026-10-16",
-      "low": 67,
-      "moderate": 4,
+      "low": 53,
+      "moderate": 3,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 134,
+      "total": 110,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 13
     },
     {
-      "above_moderate": 37,
+      "above_moderate": 35,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -11799,7 +11799,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 37,
+      "total": 35,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -11935,7 +11935,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 24,
+      "above_moderate": 21,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -11955,7 +11955,7 @@
       "moderate": 0,
       "period_end": "2031-02-15",
       "period_start": "2023-02-15",
-      "total": 24,
+      "total": 21,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -12507,7 +12507,7 @@
       "very_low": 64
     },
     {
-      "above_moderate": 279,
+      "above_moderate": 233,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -12527,7 +12527,7 @@
       "moderate": 26,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 553,
+      "total": 507,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 222
@@ -12585,7 +12585,7 @@
       "very_low": 14
     },
     {
-      "above_moderate": 660,
+      "above_moderate": 653,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -12605,7 +12605,7 @@
       "moderate": 0,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 660,
+      "total": 653,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -12689,7 +12689,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 564,
+      "above_moderate": 563,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -12705,14 +12705,14 @@
       "jurisdiction": "Truckee",
       "jurisdiction_key": "TRUCKEE",
       "last_updated": "2026-10-16",
-      "low": 186,
+      "low": 174,
       "moderate": 72,
       "period_end": "2027-08-15",
       "period_start": "2019-08-15",
-      "total": 1023,
+      "total": 946,
       "undated_entitlements": 0,
       "undated_permits": 0,
-      "very_low": 191
+      "very_low": 127
     },
     {
       "above_moderate": 803,
@@ -12923,7 +12923,7 @@
       "very_low": 96
     },
     {
-      "above_moderate": 69,
+      "above_moderate": 64,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -12939,11 +12939,11 @@
       "jurisdiction": "Union City",
       "jurisdiction_key": "UNION CITY",
       "last_updated": "2026-10-16",
-      "low": 79,
+      "low": 76,
       "moderate": 33,
       "period_end": "2031-01-31",
       "period_start": "2023-01-31",
-      "total": 254,
+      "total": 246,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 56
@@ -13183,7 +13183,7 @@
       "very_low": 194
     },
     {
-      "above_moderate": 799,
+      "above_moderate": 795,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -13203,13 +13203,13 @@
       "moderate": 0,
       "period_end": "2029-04-30",
       "period_start": "2021-04-30",
-      "total": 867,
+      "total": 863,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 57
     },
     {
-      "above_moderate": 447,
+      "above_moderate": 384,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -13229,7 +13229,7 @@
       "moderate": 4,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 453,
+      "total": 390,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 0
@@ -13703,7 +13703,7 @@
       "very_low": 9
     },
     {
-      "above_moderate": 293,
+      "above_moderate": 285,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -13723,7 +13723,7 @@
       "moderate": 33,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 335,
+      "total": 327,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 3
@@ -13755,7 +13755,7 @@
       "very_low": 0
     },
     {
-      "above_moderate": 722,
+      "above_moderate": 678,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -13771,11 +13771,11 @@
       "jurisdiction": "Woodland",
       "jurisdiction_key": "WOODLAND",
       "last_updated": "2026-10-16",
-      "low": 83,
-      "moderate": 163,
+      "low": 82,
+      "moderate": 160,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 1095,
+      "total": 1047,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 65
@@ -13937,7 +13937,7 @@
       "very_low": 64
     },
     {
-      "above_moderate": 2451,
+      "above_moderate": 2450,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -13957,13 +13957,13 @@
       "moderate": 37,
       "period_end": "2029-05-15",
       "period_start": "2021-05-15",
-      "total": 2660,
+      "total": 2659,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 26
     },
     {
-      "above_moderate": 472,
+      "above_moderate": 470,
       "acutely_low": 0,
       "cycle": "6th",
       "data_status": "reported",
@@ -13979,11 +13979,11 @@
       "jurisdiction": "Yucaipa",
       "jurisdiction_key": "YUCAIPA",
       "last_updated": "2026-10-16",
-      "low": 197,
+      "low": 191,
       "moderate": 236,
       "period_end": "2029-10-15",
       "period_start": "2021-10-15",
-      "total": 919,
+      "total": 911,
       "undated_entitlements": 0,
       "undated_permits": 0,
       "very_low": 14
@@ -14023,7 +14023,7 @@
       "7th": 17
     },
     "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
-    "dedupe_profile": "audited-apr-snapshots-v3",
+    "dedupe_profile": "audited-apr-snapshots-v4",
     "entitlement_removed_row_count": 7877,
     "entitlement_removed_units": 28864,
     "entitlement_retained_row_count": 71074,
@@ -14032,9 +14032,9 @@
     "jurisdiction_count": 539,
     "last_updated": "2026-10-16",
     "provisional": false,
-    "removed_row_count": 32219,
-    "removed_units": 59697,
-    "retained_row_count": 279086,
+    "removed_row_count": 33521,
+    "removed_units": 63140,
+    "retained_row_count": 277784,
     "selected_row_count": 311305,
     "selected_units": 557387,
     "source_manifest_sha256": "9356b8672801b342f47b35a91f3d2486d2e7d5bfd1b3bbb27c3dd0dd72783022",

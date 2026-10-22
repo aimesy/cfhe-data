@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
-from .dedupe import deduplicate, deduplicate_entitlements
+from .dedupe import deduplicate_carried_forward
 from .models import (
     DEFAULT_CATEGORY_FIELDS,
     ENTITLEMENT_CATEGORY_FIELDS,
@@ -36,7 +36,7 @@ from .schema import (
     validate_json_document,
 )
 
-DEDUPE_PROFILE = "audited-apr-snapshots-v3"
+DEDUPE_PROFILE = "audited-apr-snapshots-v4"
 CATEGORY_NAMES = (
     "acutely_low",
     "extremely_low",
@@ -97,9 +97,10 @@ class ActivitySpec:
     date_field: str
     total_field: str
     category_fields: tuple[tuple[str, ...], ...]
-    # Entitlements take the dedupe pass that recognizes rows carried forward
-    # from earlier reports; permits and completions use the permit profile.
-    carried_pass: bool = False
+    # The date and count columns of another stage. In the dedupe pass that
+    # recognizes rows carried forward from earlier reports, two rows that
+    # repeat both also link without a parcel or address match.
+    corroboration: tuple[str, str]
 
     @property
     def fields(self) -> tuple[str, ...]:
@@ -114,12 +115,13 @@ PERMIT_ACTIVITY = ActivitySpec(
     date_field="BP_ISSUE_DT1",
     total_field="NO_BUILDING_PERMITS",
     category_fields=DEFAULT_CATEGORY_FIELDS,
+    corroboration=("ENT_APPROVE_DT1", "NO_ENTITLEMENTS"),
 )
 ENTITLEMENT_ACTIVITY = ActivitySpec(
     date_field="ENT_APPROVE_DT1",
     total_field="NO_ENTITLEMENTS",
     category_fields=ENTITLEMENT_CATEGORY_FIELDS,
-    carried_pass=True,
+    corroboration=(PERMIT_ACTIVITY.date_field, PERMIT_ACTIVITY.total_field),
 )
 # Completions (certificates of occupancy or other readiness) use Table A2's
 # CO_ income columns, which reconcile to NO_OTHER_FORMS_OF_READINESS.
@@ -134,20 +136,16 @@ COMPLETION_ACTIVITY = ActivitySpec(
         ("CO_MOD_INCOME_DR", "CO_MOD_INCOME_NDR"),
         ("CO_ABOVE_MOD_INCOME",),
     ),
+    corroboration=(PERMIT_ACTIVITY.date_field, PERMIT_ACTIVITY.total_field),
 )
 
 
 def deduplicate_activity(
     activity: ActivitySpec, records: Sequence[PermitRecord]
 ) -> DedupResult:
-    """Deduplicate one activity's records under that activity's profile."""
+    """Deduplicate one activity's records under the carried forward profile."""
 
-    if activity.carried_pass:
-        return deduplicate_entitlements(
-            records,
-            corroboration=(PERMIT_ACTIVITY.date_field, PERMIT_ACTIVITY.total_field),
-        )
-    return deduplicate(records)
+    return deduplicate_carried_forward(records, corroboration=activity.corroboration)
 
 
 ENTITLEMENT_METADATA_FIELDS = (
@@ -1115,7 +1113,7 @@ def build_artifacts(
             raise ValueError(
                 f"{label} DataStore fields do not match the pinned CSV header"
             )
-    result = deduplicate(selected)
+    result = deduplicate_activity(PERMIT_ACTIVITY, selected)
     if len(selected) != len(result.retained) + len(result.removed):
         raise AssertionError("Selected rows do not reconcile with deduplication result")
 

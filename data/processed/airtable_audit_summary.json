@@ -13,19 +13,31 @@
       "7th": 17
     },
     "cycle_policy_sha256": "b953a0634424c4944dea09a99254a28f9db8f11524eddadb1954905e15d9fd7f",
-    "dedupe_profile": "audited-apr-snapshots-v3",
+    "dedupe_profile": "audited-apr-snapshots-v4",
     "jurisdiction_count": 539,
     "last_updated": "2026-10-16",
     "provisional": false,
-    "removed_row_count": 32219,
-    "removed_units": 59697,
-    "retained_row_count": 279086,
+    "removed_row_count": 33521,
+    "removed_units": 63140,
+    "retained_row_count": 277784,
     "selected_row_count": 311305,
     "selected_units": 557387,
     "source_manifest_sha256": "9356b8672801b342f47b35a91f3d2486d2e7d5bfd1b3bbb27c3dd0dd72783022",
     "undated_permits": 46
   },
   "removed_by_rule": {
+    "carried_forward_snapshot": {
+      "categories": {
+        "above_moderate": 2485,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 516,
+        "moderate": 266,
+        "very_low": 176
+      },
+      "rows": 1302,
+      "units": 3443
+    },
     "strong_aggregate_exception": {
       "categories": {
         "above_moderate": 1,
@@ -148,20 +160,20 @@
     }
   },
   "removed_categories": {
-    "above_moderate": 42381,
+    "above_moderate": 44866,
     "acutely_low": 0,
     "extremely_low": 422,
-    "low": 6507,
-    "moderate": 5045,
-    "very_low": 5342
+    "low": 7023,
+    "moderate": 5311,
+    "very_low": 5518
   },
   "retained_categories": {
-    "above_moderate": 355490,
+    "above_moderate": 353005,
     "acutely_low": 505,
     "extremely_low": 4669,
-    "low": 59732,
-    "moderate": 41944,
-    "very_low": 35350
+    "low": 59216,
+    "moderate": 41678,
+    "very_low": 35174
   },
   "selected_categories": {
     "above_moderate": 397871,
