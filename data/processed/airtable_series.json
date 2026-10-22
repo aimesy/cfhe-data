@@ -2342,7 +2342,7 @@
       }
     },
     "row_count": 17248,
-    "source_manifest_sha256": "b8a5e4efb197ac1cf56673afe6d9985842eca362ea338383acc5d93d6375b36f",
+    "source_manifest_sha256": "e2dea28041ed785df248b97b8293c5242c69d39bd4273a3e56075bcf8d2b95c6",
     "stages": {
       "completions": {
         "dated_units": 762275,
