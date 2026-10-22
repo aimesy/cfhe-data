@@ -29,7 +29,7 @@ HCD data processed in GitHub controls the permit bands:
 
 Undated permits are already included in those bands and are never added again. Config version 2 also manages `APR Data Through`, `APR Planning Period Start`, and `APR Planning Period End`. These are date fields tied to the same source artifact: December 31 of `cutoff_year`, `period_start`, and `period_end`. The publication code leaves existing RHNA and HE date lookups unchanged. Config version 1 retains the original permit-only behavior.
 
-Config version 3 manages everything version 2 manages and adds the entitlement fields below, from the Table A2 entitlement columns, counted over the same period and deduplicated by the permit rules plus one pass for entitlements that a later APR carried forward under a new tracking ID (see [methodology](methodology.md#entitlements)):
+Config version 3 manages everything version 2 manages and adds the entitlement fields below, from the Table A2 entitlement columns, counted over the same period and deduplicated by the permit rules, including the pass for activity that a later APR carried forward under a new tracking ID (see [methodology](methodology.md#entitlements)):
 
 - `🔍 Total VLI Entitlements` = acutely low + extremely low + very low
 - `🔍 Total LI Entitlements` = low

@@ -7,19 +7,31 @@
   "metadata": {
     "complete_after": "2026-06-30",
     "cutoff_year": 2025,
-    "dedupe_profile": "audited-apr-snapshots-v3",
+    "dedupe_profile": "audited-apr-snapshots-v4",
     "jurisdiction_count": 539,
     "last_updated": "2026-10-16",
     "provisional": false,
-    "removed_row_count": 32915,
-    "removed_units": 60412,
-    "retained_row_count": 280181,
+    "removed_row_count": 34224,
+    "removed_units": 63873,
+    "retained_row_count": 278872,
     "selected_row_count": 313096,
     "selected_units": 559205,
     "source_manifest_sha256": "3f1d9d54fdca6f57841ebdbcf6ec22ff96515dbdda60bfe5a5ab6a4057cf3b3a",
     "undated_permits": 45
   },
   "removed_by_rule": {
+    "carried_forward_snapshot": {
+      "categories": {
+        "above_moderate": 2502,
+        "acutely_low": 0,
+        "extremely_low": 0,
+        "low": 516,
+        "moderate": 267,
+        "very_low": 176
+      },
+      "rows": 1309,
+      "units": 3461
+    },
     "strong_aggregate_exception": {
       "categories": {
         "above_moderate": 1,
@@ -142,20 +154,20 @@
     }
   },
   "removed_categories": {
-    "above_moderate": 43019,
+    "above_moderate": 45521,
     "acutely_low": 0,
     "extremely_low": 422,
-    "low": 6568,
-    "moderate": 5060,
-    "very_low": 5343
+    "low": 7084,
+    "moderate": 5327,
+    "very_low": 5519
   },
   "retained_categories": {
-    "above_moderate": 356235,
+    "above_moderate": 353733,
     "acutely_low": 479,
     "extremely_low": 4666,
-    "low": 59889,
-    "moderate": 42155,
-    "very_low": 35369
+    "low": 59373,
+    "moderate": 41888,
+    "very_low": 35193
   },
   "selected_categories": {
     "above_moderate": 399254,

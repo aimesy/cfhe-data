@@ -78,7 +78,7 @@ The source contains annual snapshots. For dated rows with a substantive jurisdic
 
 Rows with weak identifiers require an exact raw fingerprint, except for `YEAR`, or one of the separately audited residual predicates. Same year multiplicity is always preserved. Ambiguous rows remain. The HCD dashboard total is not a target.
 
-Entitlements take one more pass that permits never take. It links rows from different APR years by approval date, income bands, entitlement count, and a shared APN, a compatible address, or a repeated building permit, ignores the tracking identifier except to keep sibling permits on one parcel apart, and keeps the latest APR year’s rows. See [methodology](docs/methodology.md).
+Every stage then takes one more pass. It links rows from different APR years by date, income bands, count, and a shared APN, a compatible address, or a repeated report of another stage, ignores the tracking identifier except to keep sibling permits on one parcel apart, and keeps the latest APR year’s rows. See [methodology](docs/methodology.md).
 
 See [methodology](docs/methodology.md), [provenance](docs/provenance.md), and [operations](docs/operations.md).
 

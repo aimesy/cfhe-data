@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from cfhe_data.dedupe import RULE_ENTITLEMENT_CARRIED, deduplicate_entitlements
+from cfhe_data.dedupe import RULE_CARRIED_FORWARD, deduplicate_carried_forward
 from cfhe_data.models import (
     DEFAULT_CATEGORY_FIELDS,
     ENTITLEMENT_CATEGORY_FIELDS,
@@ -13,7 +13,9 @@ ENTITLEMENT_COLUMNS = HcdColumns(
     reported_total="NO_ENTITLEMENTS",
     category_fields=ENTITLEMENT_CATEGORY_FIELDS,
 )
+PERMIT_COLUMNS = HcdColumns(category_fields=DEFAULT_CATEGORY_FIELDS)
 PERMIT_PAIR = ("BP_ISSUE_DT1", "NO_BUILDING_PERMITS")
+ENTITLEMENT_PAIR = ("ENT_APPROVE_DT1", "NO_ENTITLEMENTS")
 
 
 def _entitlement(**updates: object) -> dict[str, object]:
@@ -65,26 +67,48 @@ def _moved_pair(**later: object) -> list[PermitRecord]:
 
 
 def test_permit_date_and_count_link_a_carried_entitlement_that_moved() -> None:
-    result = deduplicate_entitlements(_moved_pair(), corroboration=PERMIT_PAIR)
+    result = deduplicate_carried_forward(_moved_pair(), corroboration=PERMIT_PAIR)
 
     assert [record.source_index for record in result.retained] == [1]
-    assert result.audit[0].rule == RULE_ENTITLEMENT_CARRIED
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD
 
 
 def test_corroboration_is_off_by_default() -> None:
-    assert not deduplicate_entitlements(_moved_pair()).removed
+    assert not deduplicate_carried_forward(_moved_pair()).removed
+
+
+def test_entitlement_date_and_count_link_a_carried_permit_that_moved() -> None:
+    rows = (
+        _entitlement(),
+        _entitlement(
+            YEAR="2025",
+            JURS_TRACKING_ID="2021-36",
+            APN="1008-361-77",
+            STREET_ADDRESS="4855 Arrow Hwy",
+        ),
+    )
+    records = [
+        PermitRecord.from_mapping(row, source_index=index, columns=PERMIT_COLUMNS)
+        for index, row in enumerate(rows)
+    ]
+
+    result = deduplicate_carried_forward(records, corroboration=ENTITLEMENT_PAIR)
+
+    assert [record.source_index for record in result.retained] == [1]
+    assert result.audit[0].rule == RULE_CARRIED_FORWARD
+    assert not deduplicate_carried_forward(records).removed
 
 
 def test_a_different_permit_date_does_not_corroborate() -> None:
     records = _moved_pair(BP_ISSUE_DT1="07/14/2023")
 
-    assert not deduplicate_entitlements(records, corroboration=PERMIT_PAIR).removed
+    assert not deduplicate_carried_forward(records, corroboration=PERMIT_PAIR).removed
 
 
 def test_a_different_permit_count_does_not_corroborate() -> None:
     records = _moved_pair(NO_BUILDING_PERMITS="136")
 
-    assert not deduplicate_entitlements(records, corroboration=PERMIT_PAIR).removed
+    assert not deduplicate_carried_forward(records, corroboration=PERMIT_PAIR).removed
 
 
 def test_a_blank_permit_does_not_corroborate() -> None:
@@ -99,7 +123,7 @@ def test_a_blank_permit_does_not_corroborate() -> None:
         ),
     )
 
-    assert not deduplicate_entitlements(records, corroboration=PERMIT_PAIR).removed
+    assert not deduplicate_carried_forward(records, corroboration=PERMIT_PAIR).removed
 
 
 def test_a_small_entitlement_needs_a_location_link() -> None:
@@ -116,4 +140,4 @@ def test_a_small_entitlement_needs_a_location_link() -> None:
         ),
     )
 
-    assert not deduplicate_entitlements(records, corroboration=PERMIT_PAIR).removed
+    assert not deduplicate_carried_forward(records, corroboration=PERMIT_PAIR).removed

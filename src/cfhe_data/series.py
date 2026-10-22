@@ -422,7 +422,7 @@ def build_series_artifacts(
                 "date": activity.date_field,
                 "total": activity.total_field,
             },
-            "dedupe_pass": "carried" if activity.carried_pass else "snapshot",
+            "dedupe_pass": "carried",
             "selected_row_count": len(selected),
             "selected_units": selected_units,
             "retained_row_count": len(result.retained),
