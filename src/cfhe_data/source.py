@@ -8,6 +8,7 @@ import os
 import tempfile
 import tomllib
 import urllib.error
+import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
@@ -63,6 +64,21 @@ class FetchResult:
         entry.pop("path")
         entry["raw_filename"] = self.path.name
         return entry
+
+
+def unsigned_url(url: str) -> str:
+    """Drop the X-Amz signing parameters that data.ca.gov download redirects carry.
+
+    The redirect target is signed afresh on every request, so recording the
+    signature would change the source manifest even when the data is identical.
+    """
+    parts = urllib.parse.urlsplit(url)
+    query = "&".join(
+        pair
+        for pair in parts.query.split("&")
+        if pair and not pair.split("=", 1)[0].lower().startswith("x-amz-")
+    )
+    return urllib.parse.urlunsplit(parts._replace(query=query))
 
 
 def load_specs(path: Path) -> tuple[SourceSpec, ...]:
@@ -292,7 +308,7 @@ def fetch_source(
                     name=spec.name,
                     resource_id=spec.resource_id,
                     configured_url=configured_url,
-                    resolved_url=str(resolved_url),
+                    resolved_url=unsigned_url(str(resolved_url)),
                     path=destination,
                     sha256=sha256,
                     md5=md5,
